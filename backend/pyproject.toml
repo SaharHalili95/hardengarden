@@ -19,7 +19,9 @@ classifiers = [
 # Runtime dependencies are added only in the phase that needs them,
 # each with a justification in docs/DECISIONS.md (docs/REQUIREMENTS.md section 2, R29).
 dependencies = [
+    "chromadb>=1.0,<2",
     "pydantic>=2.11,<3",
+    "pyyaml>=6,<7",
     "typer>=0.16,<1",
 ]
 
@@ -39,6 +41,7 @@ dev = [
   "pytest>=8.3",
   "pytest-cov>=6.0",
   "ruff>=0.8",
+  "types-pyyaml>=6",
 ]
 
 [build-system]
@@ -51,6 +54,13 @@ path = "hardengarden/__init__.py"
 [tool.hatch.build.targets.wheel]
 packages = ["hardengarden"]
 exclude = ["**/.gitkeep"]
+
+[tool.hatch.build.targets.wheel.force-include]
+# Original knowledge-base documents ship inside the package (never man pages, R19).
+"../knowledge" = "hardengarden/kb_docs"
+
+[tool.hatch.build.targets.sdist.force-include]
+"../knowledge" = "knowledge"
 
 # ---------------------------------------------------------------- ruff
 [tool.ruff]

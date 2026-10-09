@@ -131,3 +131,4 @@ HardenGarden itself opens no other outbound connection. The Ollama URL setting a
 |---|---|---|
 | 2026-10-09 | 0 | Baseline created. Phase 0 mitigations: SC-1, SC-2, SC-3, SC-6. |
 | 2026-10-09 | 1 | Verified by tests: LA-3 (confinement suite), PI-1 (score has no LLM input), PI-5 (AST R5 test), PM-1 (root-only checks SKIPPED + hint), PM-2 (audit-hook write test, fixtures and live host), PM-3 (runner allowlist tests). New: subprocess opens `/dev/null` read-write for stdin; accepted, harmless. |
+| 2026-10-09 | 2 | KB-1/KB-4: linter test requires an https reference per doc and no CIS material. KB-3: man pages decompressed with a 2 MiB cap (bomb test), stored 0600. SC-1: chromadb telemetry verified off (no-op class, socket audit test, no-network namespace run). New residual risk: chromadb's large transitive dependency set (ADR-009). |

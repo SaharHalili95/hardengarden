@@ -1,0 +1,130 @@
+# Golden retrieval set (Phase 2). Written before the retriever was tuned.
+# answerable: question -> the knowledge/ doc that must be retrieved (Recall@5).
+# negative:   questions the knowledge base cannot answer; they must fall below the threshold.
+
+answerable:
+  # HG-SSH-001
+  - q: Should the root user be able to log in over SSH?
+    doc: ssh-root-login
+  - q: What does PermitRootLogin prohibit-password mean?
+    doc: ssh-root-login
+  - q: Why is direct root access through sshd considered risky?
+    doc: ssh-root-login
+  - q: How do I stop administrators from connecting to the server as root via ssh?
+    doc: ssh-root-login
+
+  # HG-SSH-002
+  - q: Why should I disable password logins for SSH and use keys instead?
+    doc: ssh-password-authentication
+  - q: Is it safe to turn off PasswordAuthentication on my server?
+    doc: ssh-password-authentication
+  - q: How can brute force bots get into an ssh server that accepts passwords?
+    doc: ssh-password-authentication
+  - q: Where does cloud-init re-enable password authentication for sshd?
+    doc: ssh-password-authentication
+
+  # HG-SSH-003
+  - q: What happens if PermitEmptyPasswords is set to yes?
+    doc: ssh-empty-passwords
+  - q: Can someone log in over SSH to an account that has no password?
+    doc: ssh-empty-passwords
+  - q: How do I find accounts with an empty password field?
+    doc: ssh-empty-passwords
+
+  # HG-FW-001
+  - q: How do I enable ufw without locking myself out of ssh?
+    doc: host-firewall
+  - q: Do I need a host firewall if my services are configured correctly?
+    doc: host-firewall
+  - q: How can I tell whether nftables has an input chain with a drop policy?
+    doc: host-firewall
+  - q: What does ufw status inactive mean?
+    doc: host-firewall
+
+  # HG-NET-001
+  - q: Which services are listening on all interfaces like 0.0.0.0?
+    doc: listening-services
+  - q: How do I make a database listen only on localhost instead of the network?
+    doc: listening-services
+  - q: How do I list open ports with ss?
+    doc: listening-services
+  - q: Why is a service bound to the wildcard address a security risk?
+    doc: listening-services
+
+  # HG-FS-001
+  - q: What permissions should /etc/shadow have?
+    doc: shadow-permissions
+  - q: What can an attacker do if the shadow file is readable by everyone?
+    doc: shadow-permissions
+  - q: Who should own the file that stores password hashes?
+    doc: shadow-permissions
+
+  # HG-FS-002
+  - q: Should /etc/passwd be world readable?
+    doc: passwd-group-permissions
+  - q: What happens if a normal user can write to /etc/group?
+    doc: passwd-group-permissions
+  - q: What are the correct owner and mode for the passwd and group files?
+    doc: passwd-group-permissions
+
+  # HG-FS-003
+  - q: How do I find world-writable files under /etc?
+    doc: world-writable-etc
+  - q: Why is a world-writable file in /etc/cron.d dangerous?
+    doc: world-writable-etc
+  - q: How do I remove the write permission for others from a config file?
+    doc: world-writable-etc
+
+  # HG-ACC-001
+  - q: Is it a problem if another account besides root has UID 0?
+    doc: uid-zero-accounts
+  - q: Attackers created a toor account with uid 0, what should I do?
+    doc: uid-zero-accounts
+  - q: Why does the kernel treat any user with id zero as the superuser?
+    doc: uid-zero-accounts
+
+  # HG-ACC-002
+  - q: Why is NOPASSWD in sudoers a bad idea?
+    doc: sudo-nopasswd
+  - q: How do I safely edit sudoers files with visudo?
+    doc: sudo-nopasswd
+  - q: What does Defaults !authenticate do in sudo?
+    doc: sudo-nopasswd
+  - q: Which files in /etc/sudoers.d are ignored by includedir?
+    doc: sudo-nopasswd
+
+  # HG-UPD-001
+  - q: How do I enable unattended-upgrades for security updates?
+    doc: automatic-updates
+  - q: What does APT::Periodic::Unattended-Upgrade "1" mean?
+    doc: automatic-updates
+  - q: Where are the logs of automatic updates on Ubuntu?
+    doc: automatic-updates
+  - q: Why should security patches be installed automatically?
+    doc: automatic-updates
+
+  # HG-KRN-001
+  - q: What does randomize_va_space 2 mean?
+    doc: aslr
+  - q: Is heap randomization enabled when ASLR is set to 1?
+    doc: aslr
+  - q: How do I make address space layout randomization persistent with sysctl.d?
+    doc: aslr
+  - q: Why does ASLR make memory corruption exploits harder?
+    doc: aslr
+
+negative:
+  - q: How do I bake sourdough bread at home?
+  - q: How do I configure SELinux policies on Fedora?
+  - q: What is the best way to set up a Kubernetes ingress controller?
+  - q: How do I enable BitLocker disk encryption on Windows 11?
+  - q: Which port does PostgreSQL streaming replication use?
+  - q: How do I rotate application logs with logrotate?
+  - q: What is the difference between TCP congestion control algorithms?
+  - q: How do I write an AppArmor profile for nginx?
+  - q: How do I configure DNSSEC for my domain?
+  - q: Which JavaScript framework is fastest for single page apps?
+  - q: How do I recover a deleted git branch?
+  - q: What is the capital of Australia?
+  - q: How much RAM does a Minecraft server need?
+  - q: How do I set up two-factor authentication for my email account?
