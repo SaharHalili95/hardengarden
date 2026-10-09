@@ -12,7 +12,10 @@ from hardengarden.checks import ALL_CHECKS
 from hardengarden.core.check import Check
 from hardengarden.core.engine import run_scan
 from hardengarden.core.models import ScanReport, Status
+from hardengarden.core.settings import load_settings
 from hardengarden.core.systemview import SystemView, SystemViewError
+from hardengarden.rag.evaluate import evaluate, load_golden
+from hardengarden.rag.service import KnowledgeService
 
 app = typer.Typer(
     name="hardengarden",
@@ -152,6 +155,65 @@ def checks(
     for check in ALL_CHECKS:
         m = check.meta
         typer.echo(f"{m.id:<11} {m.severity.value:<8} {m.title}")
+
+
+kb_app = typer.Typer(help="Knowledge base: ingest, search and evaluate.", no_args_is_help=True)
+app.add_typer(kb_app, name="kb")
+
+
+@kb_app.command("ingest")
+def kb_ingest(
+    with_manpages: Annotated[
+        bool,
+        typer.Option("--with-manpages", help="Also index this system's man pages (local only)."),
+    ] = False,
+) -> None:
+    """Build the local search index. Uses Ollama embeddings when available."""
+    summary = KnowledgeService(load_settings()).ingest(with_manpages=with_manpages)
+    typer.echo(f"Knowledge base version {summary.kb_version}: {summary.lexical_chunks} chunks")
+    if with_manpages:
+        typer.echo(f"Man pages: {summary.manpage_chunks} chunks from this system")
+    for report in summary.vector_reports:
+        typer.echo(
+            f"Vectors [{report.collection}]: +{report.added} added, {report.updated} updated, "
+            f"{report.removed} removed, {report.unchanged} unchanged in {report.seconds}s"
+        )
+    if summary.vectors_skipped_reason:
+        typer.echo(summary.vectors_skipped_reason)
+
+
+@kb_app.command("search")
+def kb_search(
+    question: Annotated[str, typer.Argument(help="A question in plain language.")],
+) -> None:
+    """Show which knowledge-base passages a question retrieves, and whether it is answerable."""
+    result = KnowledgeService(load_settings()).retriever().search(question)
+    verdict = "answerable" if result.answerable else "not enough information"
+    mode = "keyword + vector" if result.used_vectors else "keyword only"
+    typer.echo(
+        f"{verdict} (confidence {result.confidence:.2f}, threshold {result.threshold:.2f}, {mode})"
+    )
+    for hit in result.hits:
+        typer.echo(f"  {hit.passage.id}")
+
+
+@kb_app.command("eval")
+def kb_eval(
+    golden: Annotated[Path, typer.Argument(help="Golden YAML file.", exists=True, dir_okay=False)],
+    vectors: Annotated[
+        bool, typer.Option("--vectors/--no-vectors", help="Use the vector index.")
+    ] = True,
+) -> None:
+    """Print Recall@5 and negative rejection for a golden set."""
+    retriever = KnowledgeService(load_settings()).retriever(use_vectors=vectors)
+    report = evaluate(retriever, load_golden(golden))
+    typer.echo(f"Mode: {'keyword + vector' if report.used_vectors else 'keyword only'}")
+    typer.echo(f"Recall@5: {report.recall_at_5:.4f} ({report.answerable} answerable questions)")
+    typer.echo(f"Negative rejection: {report.negative_rejection:.4f} ({report.negative} questions)")
+    for line in report.misses:
+        typer.echo(f"  miss: {line}")
+    for line in report.false_accepts:
+        typer.echo(f"  false accept: {line}")
 
 
 if __name__ == "__main__":  # pragma: no cover
