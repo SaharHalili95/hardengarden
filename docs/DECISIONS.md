@@ -58,3 +58,67 @@ Format: **ADR-NNN — Title** · Date · Status · Context · Decision · Conseq
     gates (core/checks ≥ 90 %, api ≥ 85 %) are enforced in the phases that create those
     packages. Thresholds are never lowered (R22).
 - **Consequences:** No runtime dependencies exist after Phase 0.
+
+## ADR-004 — One branch and one merge commit per phase
+
+- **Date:** 2026-10-09 · **Status:** Accepted
+- **Context:** HardenGarden is built in phases (`docs/REQUIREMENTS.md` section 6), each with a
+  gate.
+- **Decision:** Every phase is developed on its own branch (`phase-N-name`) and merged into
+  `main` with a `--no-ff` merge commit once its full test, lint and security suite passes, so
+  each phase stays reviewable on its own. Gate items that need infrastructure not available
+  yet (a published release, real AI models) are recorded as open, never as passed.
+
+## ADR-005 — Runtime dependency: pydantic (v2)
+
+- **Date:** 2026-10-09 · **Status:** Accepted (named in docs/REQUIREMENTS.md section 2)
+- **Why:** The check/result/report contracts (section 5.1) are Pydantic models, which give
+  validation, frozen objects and a JSON schema for the API in Phase 4.
+- **Alternatives:** dataclasses + hand-written validation (more code, no schema), attrs.
+- **License / maintenance:** MIT; very actively maintained (pydantic-core in Rust, wheels for
+  all target platforms). Pulled in: `pydantic-core`, `annotated-types`, `typing-extensions`,
+  `typing-inspection` (all MIT/PSF).
+
+## ADR-006 — Runtime dependency: typer
+
+- **Date:** 2026-10-09 · **Status:** Accepted (named in docs/REQUIREMENTS.md section 2)
+- **Why:** The CLI (`scan`, `checks`, later `explain`, `kb`, `serve`).
+- **Alternatives:** argparse (stdlib; considered, but section 2 fixes Typer). `typer-slim`
+  is now only an alias of `typer`, so it does not reduce dependencies.
+- **License / maintenance:** MIT; actively maintained. It no longer depends on `click`. Pulled in:
+  `rich` (MIT) for help rendering, `shellingham` (ISC), `annotated-doc`
+  (MIT). HardenGarden's own output uses plain `typer.style`, not rich markup.
+
+## ADR-007 — Python 3.12 is the minimum, including for the CLI fallback (R34)
+
+- **Date:** 2026-10-09 · **Status:** Accepted
+- **Context:** R34 asks for `pipx install hardengarden` on Ubuntu 22.04, Ubuntu 24.04 and
+  Debian 12. Their system Pythons are 3.10, 3.12 and 3.11, while section 2 fixes 3.12 and
+  section 5.1 uses `StrEnum` (3.11+).
+- **Decision:** Keep `requires-python >= 3.12`. The documented fallback on 22.04 and Debian 12
+  installs a 3.12 interpreter through uv (`uv tool install <wheel>`, or `pipx install
+  --python "$(uv python find 3.12)" <wheel>`). Phase 6 tests exactly these commands.
+- **Consequences:** No downgrade of the codebase to 3.10 syntax. This is a deliberate
+  reading of R34: the CLI needs Python 3.12, which uv provides where the system lacks it.
+
+## ADR-008 — Scanner design choices (Phase 1)
+
+- **Date:** 2026-10-09 · **Status:** Accepted
+- **Commands are an enum, not argv.** `CommandRunner.run()` takes a `Command` member; each
+  maps to a constant absolute binary list and constant arguments. Binaries must be
+  root-owned and not group/world-writable. Only three commands exist: `sshd -T`,
+  `ufw status`, `nft list ruleset`. Everything else is read from files.
+- **Commands only describe the live host.** When `--root` is not `/`, a `NullRunner` is used
+  and checks fall back to configuration files.
+- **Listening sockets come from `/proc/net/*`** through `SystemView`, not from `ss`, so
+  HG-NET-001 needs no subprocess and no root and is fully testable with fixtures.
+- **`requires_root` is enforced only on the live host.** Scanning a `--root` tree as a normal
+  user still evaluates root-only checks, because the files are readable there.
+- **Fixture ownership.** Git cannot store owners or most mode bits, so each fixture scenario
+  has a `meta.json` (mode, uid, gid, unreadable). A test-only `SystemView` subclass applies
+  it; production code has no knowledge of it.
+- **Severities** (the requirements list the checks but not their severities):
+  CRITICAL for SSH-003, FS-001, ACC-001; HIGH for SSH-001, SSH-002, FW-001, FS-002;
+  MEDIUM for NET-001, FS-003, ACC-002, UPD-001, KRN-001.
+- **Expected listeners** for HG-NET-001: tcp/22 (SSH), udp/68 and udp/546 (DHCP clients).
+  Anything else on a non-loopback address is a WARN.
