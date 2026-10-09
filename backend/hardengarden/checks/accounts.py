@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import re
+from datetime import UTC, date, datetime
 from pathlib import PurePosixPath
 
-from hardengarden.checks.etcfiles import parse_passwd
+from hardengarden.checks.etcfiles import PasswdEntry, parse_passwd, shadow_states
 from hardengarden.core.check import Check, CheckContext, Outcome
 from hardengarden.core.models import ANY_LINUX, Category, CheckMeta, Reason, Severity
 from hardengarden.core.systemview import (
@@ -34,11 +35,41 @@ def check_uid_zero(ctx: CheckContext) -> Outcome:
         if parsed.malformed_lines
         else []
     )
-    if extra:
-        return Outcome.failed(
-            *(f"account '{e.name}' has UID 0 (/etc/passwd:{e.line})" for e in extra), *notes
+    if not extra:
+        return Outcome.passed("root is the only account with UID 0", *notes)
+    contained = _contained(ctx.view, extra)
+    evidence = [
+        f"account '{e.name}' has UID 0 (/etc/passwd:{e.line})"
+        + (
+            " but is locked, expired and has no login shell; remove it after investigating"
+            if e.name in contained
+            else ""
         )
-    return Outcome.passed("root is the only account with UID 0", *notes)
+        for e in extra
+    ]
+    if any(e.name not in contained for e in extra):
+        return Outcome.failed(*evidence, *notes)
+    return Outcome.warn(*evidence, *notes)
+
+
+_NO_LOGIN_SHELLS = ("nologin", "/bin/false", "/usr/bin/false")
+
+
+def _contained(view: SystemView, entries: list[PasswdEntry]) -> set[str]:
+    """UID-0 accounts that are locked, expired and have no login shell (needs /etc/shadow)."""
+    try:
+        today = (datetime.now(tz=UTC).date() - date(1970, 1, 1)).days
+        states = shadow_states(view.read_text("/etc/shadow"), today)
+    except SystemViewError:
+        return set()
+    return {
+        e.name
+        for e in entries
+        if e.name in states
+        and states[e.name].locked
+        and states[e.name].expired
+        and e.shell.endswith(_NO_LOGIN_SHELLS)
+    }
 
 
 def _logical_lines(text: str) -> list[tuple[int, str]]:

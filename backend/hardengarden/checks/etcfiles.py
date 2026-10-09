@@ -8,6 +8,7 @@ from hardengarden.core.systemview import SystemView, SystemViewError
 
 PASSWD_FIELDS = 7
 GROUP_FIELDS = 4
+SHADOW_MIN_FIELDS = 8
 
 
 @dataclass(frozen=True, slots=True)
@@ -16,6 +17,7 @@ class PasswdEntry:
     uid: int
     gid: int
     line: int
+    shell: str = ""
 
 
 @dataclass(frozen=True, slots=True)
@@ -40,8 +42,27 @@ def parse_passwd(text: str) -> ParsedPasswd:
         except ValueError:
             malformed.append(number)
             continue
-        entries.append(PasswdEntry(fields[0], uid, gid, number))
+        entries.append(PasswdEntry(fields[0], uid, gid, number, fields[6]))
     return ParsedPasswd(tuple(entries), tuple(malformed))
+
+
+@dataclass(frozen=True, slots=True)
+class ShadowState:
+    locked: bool  # password field starts with "!" or "*" (no password login possible)
+    expired: bool  # account expiry date is set and in the past
+
+
+def shadow_states(text: str, today_days: int) -> dict[str, ShadowState]:
+    """Lock/expiry state per account. The password hash itself is never kept or returned."""
+    states: dict[str, ShadowState] = {}
+    for raw in text.splitlines():
+        fields = raw.split(":")
+        if len(fields) < SHADOW_MIN_FIELDS or not fields[0]:
+            continue
+        expire = fields[7].strip()
+        expired = expire.isdigit() and int(expire) <= today_days
+        states[fields[0]] = ShadowState(fields[1].startswith(("!", "*")), expired)
+    return states
 
 
 def group_ids(text: str) -> dict[str, int]:
