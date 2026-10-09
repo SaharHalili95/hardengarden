@@ -1,0 +1,10 @@
+# Documentation tooling (shipped in no package). Same rules as backend/,
+# plus relaxations that fit command-line tools and smoke tests.
+extend = "../../backend/pyproject.toml"
+
+[lint.per-file-ignores]
+# T201: printing is these tools' output. S603: they run our own scanner or git with fixed
+# argument lists. S607: git is resolved from PATH on CI runners and developer machines.
+"*.py" = ["T201", "S603", "S607"]
+# Tests: S101 and PLR2004 are the test idiom; S108: the noexec check inspects /tmp on purpose.
+"tests/*.py" = ["T201", "S603", "S101", "PLR2004", "S108"]

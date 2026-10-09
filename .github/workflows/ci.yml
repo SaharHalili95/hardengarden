@@ -39,8 +39,8 @@ jobs:
           enable-cache: true
           cache-dependency-glob: backend/uv.lock
       - run: uv sync
-      - run: uv run ruff check --output-format=github . ../packaging
-      - run: uv run ruff format --check . ../packaging
+      - run: uv run ruff check --output-format=github . ../packaging ../docs/tools
+      - run: uv run ruff format --check . ../packaging ../docs/tools
 
   typecheck:
     name: Type-check (mypy --strict)
@@ -57,8 +57,8 @@ jobs:
           cache-dependency-glob: backend/uv.lock
       - run: uv sync
       - run: uv run mypy
-      - name: mypy --strict on the release scripts
-        run: uv run mypy --strict ../packaging
+      - name: mypy --strict on the release and documentation scripts
+        run: uv run mypy --strict ../packaging ../docs/tools
 
   test:
     name: Tests (pytest + coverage)
@@ -84,7 +84,7 @@ jobs:
         run: shellcheck -x hardengarden/remediation/templates/*.sh ../packaging/*.sh ../packaging/*/*.sh
       - name: Release script tests and version consistency
         run: |
-          uv run pytest ../packaging/tests --no-cov -p no:cacheprovider
+          uv run pytest ../packaging/tests ../docs/tools/tests --no-cov -p no:cacheprovider
           python3 ../packaging/check_versions.py
       - name: Live scan of the runner (real Ubuntu 24.04, unprivileged)
         run: uv run hardengarden scan
@@ -136,6 +136,36 @@ jobs:
           uv run pip-audit -r "$RUNNER_TEMP/requirements.txt" --disable-pip --require-hashes --strict \
             --ignore-vuln GHSA-f4j7-r4q5-qw2c --ignore-vuln GHSA-36p7-vc44-83pf \
             --ignore-vuln GHSA-xph7-9rjv-w5fr --ignore-vuln GHSA-2wm9-hf6c-p5cr
+
+  docs:
+    name: Docs (links, README commands)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          enable-cache: true
+          cache-dependency-glob: backend/uv.lock
+      - name: Internal links and heading anchors in every Markdown file
+        run: python3 docs/tools/check_links.py
+      - name: External links
+        # Network-dependent and slower: PRs to main and manual runs only.
+        if: (github.event_name == 'pull_request' && github.base_ref == 'main') || github.event_name == 'workflow_dispatch'
+        run: python3 docs/tools/check_links.py --external
+      - name: Install the CLI from a freshly built wheel, as a user would from a release
+        run: |
+          uv build --wheel --directory backend -o "$RUNNER_TEMP/wheel"
+          uv tool install "$RUNNER_TEMP"/wheel/hardengarden-*.whl
+          uv tool dir --bin >> "$GITHUB_PATH"
+      - name: Run every README command marked as readme-test run
+        run: python3 docs/tools/readme_commands.py
 
   trivy:
     name: Trivy (lockfiles, fail on HIGH/CRITICAL)
