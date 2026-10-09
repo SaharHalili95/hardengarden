@@ -1,0 +1,36 @@
+# Held-out set: written AFTER the threshold (0.30) was fixed on golden.yaml, and never used
+# for tuning. It measures how well the threshold generalizes. Its results are reported as-is.
+
+answerable:
+  - q: Can I keep root SSH access but only with keys?
+    doc: ssh-root-login
+  - q: My sshd allows logging in with passwords, how risky is that?
+    doc: ssh-password-authentication
+  - q: Does OpenSSH accept blank passwords by default?
+    doc: ssh-empty-passwords
+  - q: What is the default incoming policy of ufw?
+    doc: host-firewall
+  - q: A redis instance is reachable from the internet, what should I do?
+    doc: listening-services
+  - q: Is mode 0640 correct for the shadow password file?
+    doc: shadow-permissions
+  - q: Who is allowed to modify the user account database file?
+    doc: passwd-group-permissions
+  - q: Which command lists files that every user can modify in the configuration directory?
+    doc: world-writable-etc
+  - q: How do I lock a suspicious superuser account without deleting it?
+    doc: uid-zero-accounts
+  - q: Can the default cloud user run sudo without typing a password?
+    doc: sudo-nopasswd
+  - q: How often do unattended upgrades run by default?
+    doc: automatic-updates
+  - q: Which kernel parameter controls memory layout randomization?
+    doc: aslr
+
+negative:
+  - q: How do I configure a reverse proxy with Apache?
+  - q: What is the best antivirus for Linux desktops?
+  - q: How do I mount an NFS share at boot?
+  - q: How do I tune the JVM garbage collector?
+  - q: Which VPN protocol is the fastest?
+  - q: How can I speed up my WiFi connection?
