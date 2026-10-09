@@ -18,6 +18,7 @@ env:
   UV_LOCKED: "1"          # fail if uv.lock is out of date; never re-resolve
   PYTHON_VERSION: "3.12"
   GITLEAKS_VERSION: "8.30.1"
+  NODE_VERSION: "22"
 
 defaults:
   run:
@@ -154,3 +155,85 @@ jobs:
           tar -xzf "${tarball}" gitleaks
       - name: Scan git history
         run: '"$RUNNER_TEMP/gitleaks" git . --no-banner --redact --verbose --exit-code 1'
+
+  frontend:
+    name: Desktop UI (tsc, ESLint, Prettier, Vitest, Playwright)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: desktop
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: Enable pnpm (version pinned by package.json "packageManager")
+        run: corepack enable
+      - name: Locate the pnpm store
+        id: pnpm-store
+        run: echo "path=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ steps.pnpm-store.outputs.path }}
+          key: pnpm-${{ runner.os }}-${{ hashFiles('desktop/pnpm-lock.yaml') }}
+      - name: Install (lockfile only, install scripts disabled by .npmrc)
+        run: pnpm install --frozen-lockfile
+      - name: Dependency advisories (all UI dependencies, dev included)
+        run: pnpm audit
+      - run: pnpm typecheck
+      - run: pnpm lint
+      - run: pnpm format:check
+      - run: pnpm test
+      - name: Install Chromium for Playwright
+        run: pnpm exec playwright install --with-deps chromium
+      - name: End-to-end tests against the production web build (mocked API)
+        run: pnpm test:e2e
+      - name: Keep the Playwright report when something fails
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: playwright-report
+          path: desktop/playwright-report
+          retention-days: 7
+
+  desktop-shell:
+    name: Desktop shell (Rust fmt, clippy, tests)
+    # Built on Ubuntu 22.04: the glibc baseline for every native binary (R31).
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: desktop
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Tauri system libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libwebkit2gtk-4.1-dev build-essential \
+            file libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - run: corepack enable
+      - run: pnpm install --frozen-lockfile
+      - name: Build the web assets the shell embeds
+        run: pnpm build
+      - name: Empty scanner folder (the real one is built by release.yml; tauri-build needs the path)
+        run: mkdir -p src-tauri/binaries/hardengarden-sidecar
+      - name: Install the pinned Rust toolchain (src-tauri/rust-toolchain.toml)
+        working-directory: desktop/src-tauri
+        run: rustup toolchain install
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          workspaces: desktop/src-tauri
+      - working-directory: desktop/src-tauri
+        run: cargo fmt --check
+      - working-directory: desktop/src-tauri
+        run: cargo clippy --locked --all-targets -- -D warnings
+      - working-directory: desktop/src-tauri
+        run: cargo test --locked

@@ -1,0 +1,559 @@
+/* HardenGarden: a field survey of one garden bed. Fonts are bundled; nothing loads remotely. */
+
+:root {
+  color-scheme: light;
+  --lichen: #e9eee6; /* window background */
+  --leaf-paper: #f7f9f4; /* surfaces */
+  --moss: #1f2b22; /* ink */
+  --moss-soft: #4a594e; /* secondary ink, 6.6:1 on leaf paper */
+  --furrow: #c9d3c6; /* dividers */
+  --thistle: #8b2f6f; /* fail: weeds */
+  --thistle-wash: #f4e4ef;
+  --pollen: #6f5300; /* warn */
+  --pollen-wash: #f6edcf;
+  --fern: #2b6537; /* pass */
+  --fern-wash: #e0eedf;
+  --stone: #5a665c; /* skipped / not applicable */
+  --soil: #7a6a55; /* the bed itself */
+  --focus: #1d5fa8;
+  --radius-small: 4px;
+  --radius-panel: 10px;
+  --font: "Recursive Variable", system-ui, sans-serif;
+  --casual: "CASL" 1, "MONO" 0;
+  --linear: "CASL" 0, "MONO" 0;
+  --mono: "CASL" 0, "MONO" 1;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --lichen: #141c16;
+    --leaf-paper: #1d281f;
+    --moss: #e4ebe2;
+    --moss-soft: #a8b7ab;
+    --furrow: #33433a;
+    --thistle: #eaa0d8;
+    --thistle-wash: #3a2333;
+    --pollen: #e8c862;
+    --pollen-wash: #3a3218;
+    --fern: #91d39a;
+    --fern-wash: #1f3523;
+    --stone: #a3aea5;
+    --soil: #8f7d62;
+    --focus: #8cc2ff;
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --lichen: #141c16;
+  --leaf-paper: #1d281f;
+  --moss: #e4ebe2;
+  --moss-soft: #a8b7ab;
+  --furrow: #33433a;
+  --thistle: #eaa0d8;
+  --thistle-wash: #3a2333;
+  --pollen: #e8c862;
+  --pollen-wash: #3a3218;
+  --fern: #91d39a;
+  --fern-wash: #1f3523;
+  --stone: #a3aea5;
+  --soil: #8f7d62;
+  --focus: #8cc2ff;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--lichen);
+  color: var(--moss);
+  font-family: var(--font);
+  font-variation-settings: var(--linear);
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+h1,
+h2,
+h3 {
+  font-variation-settings: var(--casual);
+  font-weight: 640;
+  line-height: 1.2;
+  margin: 0 0 0.5rem;
+}
+
+h1 {
+  font-size: 2rem;
+}
+
+h2 {
+  font-size: 1.375rem;
+}
+
+h3 {
+  font-size: 1.0625rem;
+}
+
+p {
+  margin: 0 0 0.75rem;
+  max-width: 72ch;
+}
+
+code,
+pre,
+.mono {
+  font-family: var(--font);
+  font-variation-settings: var(--mono);
+  font-size: 0.875rem;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* ------------------------------------------------------------------ shell */
+
+.shell {
+  display: grid;
+  grid-template-columns: 15rem minmax(0, 1fr);
+  min-height: 100%;
+}
+
+.rail {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 1.5rem 1rem;
+  border-right: 1px solid var(--furrow);
+}
+
+.brand {
+  font-variation-settings: var(--casual);
+  font-weight: 760;
+  font-size: 1.375rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.rail nav ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.25rem;
+}
+
+.rail nav button {
+  width: 100%;
+  text-align: left;
+  border: 0;
+  background: none;
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius-small);
+  cursor: pointer;
+}
+
+.rail nav button[aria-current="page"] {
+  background: var(--leaf-paper);
+  font-weight: 650;
+  box-shadow: inset 3px 0 0 var(--fern);
+}
+
+.rail nav button:hover {
+  background: var(--leaf-paper);
+}
+
+.main {
+  padding: 2rem 2.5rem 3rem;
+  max-width: 64rem;
+  /* Long script lines scroll inside their block instead of widening the page. */
+  min-width: 0;
+}
+
+/* ------------------------------------------------------------------ controls */
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  border: 1px solid var(--moss);
+  background: var(--moss);
+  color: var(--leaf-paper);
+  border-radius: var(--radius-small);
+  padding: 0.5rem 1rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.button.quiet {
+  background: transparent;
+  color: var(--moss);
+}
+
+.button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.field {
+  display: grid;
+  gap: 0.25rem;
+  margin-bottom: 1rem;
+  max-width: 32rem;
+}
+
+.field label {
+  font-weight: 600;
+}
+
+.field .hint {
+  color: var(--moss-soft);
+  font-size: 0.875rem;
+}
+
+.field input,
+.field select,
+.field textarea {
+  background: var(--leaf-paper);
+  border: 1px solid var(--moss-soft);
+  border-radius: var(--radius-small);
+  padding: 0.5rem 0.625rem;
+}
+
+.panel {
+  background: var(--leaf-paper);
+  border: 1px solid var(--furrow);
+  border-radius: var(--radius-panel);
+  padding: 1.25rem 1.5rem;
+}
+
+.notice {
+  border-left: 4px solid var(--pollen);
+  background: var(--pollen-wash);
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-small);
+}
+
+.notice.danger {
+  border-color: var(--thistle);
+  background: var(--thistle-wash);
+}
+
+.error-text {
+  color: var(--thistle);
+}
+
+/* ------------------------------------------------------------------ garden */
+
+.survey {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 15rem;
+  gap: 2rem;
+  align-items: start;
+}
+
+.bed {
+  background: var(--leaf-paper);
+  border: 1px solid var(--furrow);
+  border-radius: var(--radius-panel);
+  padding: 2.5rem 1.5rem 0;
+}
+
+.bed ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 0.25rem;
+  border-bottom: 10px solid var(--soil);
+}
+
+.plant {
+  width: 100%;
+  display: grid;
+  justify-items: center;
+  gap: 0.25rem;
+  border: 0;
+  background: none;
+  padding: 0.5rem 0.25rem 0.25rem;
+  border-radius: var(--radius-small);
+  cursor: pointer;
+}
+
+.plant:hover {
+  background: var(--lichen);
+}
+
+.plant .plant-id {
+  font-variation-settings: var(--mono);
+  font-size: 0.75rem;
+  color: var(--moss-soft);
+}
+
+.score {
+  font-variation-settings: var(--casual);
+  font-weight: 800;
+  font-size: 4.5rem;
+  line-height: 1;
+  margin: 0.25rem 0 0.5rem;
+}
+
+.score small {
+  font-size: 1.25rem;
+  font-weight: 500;
+  color: var(--moss-soft);
+}
+
+.legend {
+  list-style: none;
+  padding: 0;
+  margin: 1rem 0 0;
+  display: grid;
+  gap: 0.25rem;
+  color: var(--moss-soft);
+  font-size: 0.875rem;
+}
+
+.legend li {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* ------------------------------------------------------------------ weeds */
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin: 1rem 0;
+}
+
+.filters .field {
+  margin: 0;
+}
+
+.weeds {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--furrow);
+}
+
+.weeds li {
+  border-bottom: 1px solid var(--furrow);
+}
+
+.weeds button {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 2.5rem 6.5rem 7rem 1fr;
+  align-items: center;
+  gap: 0.75rem;
+  border: 0;
+  background: none;
+  padding: 0.625rem 0.5rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.weeds button.compact {
+  grid-template-columns: 2.5rem 6.5rem 1fr;
+}
+
+.weeds button:hover {
+  background: var(--leaf-paper);
+}
+
+.status-tag {
+  font-weight: 650;
+  font-size: 0.875rem;
+}
+
+.status-FAIL {
+  color: var(--thistle);
+}
+
+.status-WARN {
+  color: var(--pollen);
+}
+
+.status-PASS {
+  color: var(--fern);
+}
+
+.status-SKIPPED,
+.status-NOT_APPLICABLE,
+.status-ERROR {
+  color: var(--stone);
+}
+
+/* ------------------------------------------------------------------ detail */
+
+.evidence {
+  list-style: none;
+  padding: 0.75rem 1rem;
+  margin: 0 0 1.5rem;
+  background: var(--leaf-paper);
+  border: 1px solid var(--furrow);
+  border-radius: var(--radius-small);
+  overflow-x: auto;
+}
+
+.script {
+  background: var(--leaf-paper);
+  border: 1px solid var(--furrow);
+  border-radius: var(--radius-small);
+  padding: 1rem;
+  overflow: auto;
+  max-height: 24rem;
+  white-space: pre;
+}
+
+.answer {
+  white-space: pre-wrap;
+  margin: 0.75rem 0;
+}
+
+.citations {
+  color: var(--moss-soft);
+  font-size: 0.875rem;
+}
+
+.stack {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1.5rem;
+}
+
+.row.spread {
+  justify-content: space-between;
+}
+
+.row.spaced {
+  margin: 0.75rem 0;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+/* ------------------------------------------------------------------ ai status */
+
+.ai-status {
+  margin-top: auto;
+  font-size: 0.875rem;
+}
+
+.ai-status button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  border: 0;
+  background: none;
+  padding: 0.25rem 0.5rem;
+  cursor: pointer;
+  text-align: left;
+}
+
+.dot {
+  width: 0.625rem;
+  height: 0.625rem;
+  border-radius: 50%;
+  flex: none;
+  background: var(--stone);
+}
+
+.dot.ready {
+  background: var(--fern);
+}
+
+.dot.reduced_quality,
+.dot.model_not_downloaded,
+.dot.not_enough_memory {
+  background: var(--pollen);
+}
+
+progress {
+  width: 100%;
+  accent-color: var(--fern);
+}
+
+dialog {
+  border: 1px solid var(--furrow);
+  border-radius: var(--radius-panel);
+  background: var(--leaf-paper);
+  color: var(--moss);
+  max-width: 30rem;
+  padding: 1.5rem;
+}
+
+dialog::backdrop {
+  background: rgb(20 28 22 / 45%);
+}
+
+@media (max-width: 760px) {
+  .shell {
+    grid-template-columns: 1fr;
+  }
+
+  .rail {
+    border-right: 0;
+    border-bottom: 1px solid var(--furrow);
+  }
+
+  .main {
+    padding: 1.25rem;
+  }
+
+  .survey {
+    grid-template-columns: 1fr;
+  }
+
+  .bed ul {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition: none !important;
+    animation: none !important;
+  }
+}

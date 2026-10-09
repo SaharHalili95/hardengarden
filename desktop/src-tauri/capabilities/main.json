@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "main",
+  "description": "The only permission the UI gets: write text to the clipboard (Copy script). The scanner process is started by the Rust side, never by the webview.",
+  "windows": ["main"],
+  "permissions": ["clipboard-manager:allow-write-text"]
+}

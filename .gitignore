@@ -58,3 +58,5 @@ sbom*.json
 .idea/
 .vscode/
 *.swp
+desktop/src-tauri/gen/
+*.tsbuildinfo

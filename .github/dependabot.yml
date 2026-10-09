@@ -27,3 +27,39 @@ updates:
     groups:
       actions:
         patterns: ["*"]
+
+  # Desktop UI dependencies locked in desktop/pnpm-lock.yaml
+  - package-ecosystem: "npm"
+    directory: "/desktop"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+    ignore:
+      # React 18 is fixed by the project spec (docs/REQUIREMENTS.md, Section 2).
+      - dependency-name: "react"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "react-dom"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@types/react"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@types/react-dom"
+        update-types: ["version-update:semver-major"]
+    groups:
+      dev-tools:
+        dependency-type: "development"
+        update-types: ["minor", "patch"]
+
+  # Desktop shell (Rust) dependencies locked in desktop/src-tauri/Cargo.lock
+  - package-ecosystem: "cargo"
+    directory: "/desktop/src-tauri"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore"
+      include: "scope"
