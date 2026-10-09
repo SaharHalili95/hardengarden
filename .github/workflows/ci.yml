@@ -76,10 +76,32 @@ jobs:
         run: |
           uv run coverage report --include='hardengarden/core/*' --fail-under=90
           uv run coverage report --include='hardengarden/checks/*' --fail-under=90
+      - name: shellcheck all remediation templates
+        run: shellcheck -x hardengarden/remediation/templates/*.sh
       - name: Live scan of the runner (real Ubuntu 24.04, unprivileged)
         run: uv run hardengarden scan
       - name: Build wheel (pure Python, no native build; R34)
         run: uv build --wheel
+
+  templates:
+    name: Remediation templates in disposable containers
+    # Heavier job (image build + apt): PRs to main and manual runs only (R30).
+    if: (github.event_name == 'pull_request' && github.base_ref == 'main') || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          enable-cache: true
+          cache-dependency-glob: backend/uv.lock
+      - run: uv sync
+      - name: Run every template in a throwaway Ubuntu 24.04 container
+        # Root is needed only to extract the container filesystem with its real owners.
+        run: sudo --preserve-env=PATH,UV_LOCKED "$(command -v uv)" run --no-sync pytest -m container tests/remediation --no-cov
 
   security:
     name: Security (bandit + pip-audit)

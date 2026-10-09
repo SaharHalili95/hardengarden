@@ -1,0 +1,63 @@
+name: LLM evaluation (manual)
+
+# Real-model grounding/refusal evaluation (Phase 3, ADR-002 #6).
+# Manual only: it downloads model weights and takes several minutes on a CPU runner.
+on:
+  workflow_dispatch:
+    inputs:
+      model:
+        description: Chat model to evaluate
+        required: true
+        default: qwen2.5:1.5b-instruct
+        type: choice
+        options:
+          - qwen2.5:1.5b-instruct
+          - qwen2.5:3b-instruct
+          - qwen2.5:7b-instruct
+
+permissions:
+  contents: read
+
+env:
+  OLLAMA_VERSION: "0.40.2"
+  PYTHON_VERSION: "3.12"
+
+jobs:
+  evaluate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          enable-cache: true
+          cache-dependency-glob: backend/uv.lock
+      - name: Install Ollama (official release, checksum-verified)
+        working-directory: ${{ runner.temp }}
+        run: |
+          set -euo pipefail
+          base="https://github.com/ollama/ollama/releases/download/v${OLLAMA_VERSION}"
+          curl -sSfLO "${base}/ollama-linux-amd64.tar.zst"
+          curl -sSfLO "${base}/sha256sum.txt"
+          grep ' ./ollama-linux-amd64.tar.zst$' sha256sum.txt | sed 's| ./| |' | sha256sum -c -
+          mkdir -p ollama && tar --zstd -xf ollama-linux-amd64.tar.zst -C ollama
+          echo "${RUNNER_TEMP}/ollama/bin" >> "$GITHUB_PATH"
+      - name: Start Ollama on loopback and pull models
+        env:
+          MODEL: ${{ inputs.model }}
+        run: |
+          OLLAMA_HOST=127.0.0.1:11434 nohup ollama serve > "$RUNNER_TEMP/ollama.log" 2>&1 &
+          for _ in $(seq 1 30); do curl -sf http://127.0.0.1:11434/api/version && break; sleep 1; done
+          ollama pull nomic-embed-text
+          ollama pull "$MODEL"
+      - run: uv sync --locked
+      - name: Evaluate
+        env:
+          HG_EVAL_MODEL: ${{ inputs.model }}
+        run: uv run pytest -m live tests/llm_eval -s --no-cov
