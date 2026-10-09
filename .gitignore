@@ -1,0 +1,60 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+build/
+dist/
+.eggs/
+*.spec.bak
+
+# --- Tooling caches ---
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+
+# --- Runtime data (never commit) ---
+# Local vector store, LLM cache, scan results, ingested man pages (R19)
+.hardengarden/
+chroma/
+*.sqlite3
+manpages_cache/
+
+# --- Secrets (R10) ---
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.pfx
+id_rsa*
+id_ed25519*
+secrets.*
+
+# --- Frontend / Tauri (Phase 5+) ---
+node_modules/
+desktop/dist/
+desktop/src-tauri/target/
+desktop/src-tauri/binaries/
+playwright-report/
+test-results/
+
+# --- Release artifacts (R25: never commit build output) ---
+*.deb
+*.AppImage
+*.whl
+*.tar.gz
+sbom*.json
+*.spdx.json
+*.sha256
+
+# --- OS / editors ---
+.DS_Store
+.idea/
+.vscode/
+*.swp
