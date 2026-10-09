@@ -223,6 +223,8 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: Build the web assets the shell embeds
         run: pnpm build
+      - name: Empty scanner folder (the real one is built by release.yml; tauri-build needs the path)
+        run: mkdir -p src-tauri/binaries/hardengarden-sidecar
       - name: Install the pinned Rust toolchain (src-tauri/rust-toolchain.toml)
         working-directory: desktop/src-tauri
         run: rustup toolchain install
