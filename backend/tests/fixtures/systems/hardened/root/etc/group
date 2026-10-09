@@ -1,0 +1,4 @@
+root:x:0:
+shadow:x:42:
+sudo:x:27:alice
+alice:x:1000:

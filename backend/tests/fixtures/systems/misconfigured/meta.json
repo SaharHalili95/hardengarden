@@ -1,0 +1,21 @@
+{
+  "/etc/app": {
+    "mode": "0777"
+  },
+  "/etc/cron.d/backup": {
+    "mode": "0666"
+  },
+  "/etc/passwd": {
+    "mode": "0666"
+  },
+  "/etc/shadow": {
+    "gid": 42,
+    "mode": "0644"
+  },
+  "/etc/sudoers": {
+    "mode": "0440"
+  },
+  "/etc/sudoers.d/90-ops": {
+    "mode": "0440"
+  }
+}

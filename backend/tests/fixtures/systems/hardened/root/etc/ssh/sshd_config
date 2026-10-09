@@ -1,0 +1,7 @@
+Include /etc/ssh/sshd_config.d/*.conf
+
+#PermitRootLogin prohibit-password
+KbdInteractiveAuthentication no
+UsePAM yes
+X11Forwarding no
+Subsystem	sftp	/usr/lib/openssh/sftp-server

@@ -1,0 +1,12 @@
+{
+  "/etc/shadow": {
+    "gid": 42,
+    "mode": "0640"
+  },
+  "/etc/sudoers": {
+    "mode": "0440"
+  },
+  "/etc/sudoers.d/README": {
+    "mode": "0440"
+  }
+}

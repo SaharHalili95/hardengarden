@@ -1,0 +1,6 @@
+APT {
+  Periodic {
+    Update-Package-Lists "0";
+    Unattended-Upgrade "1";
+  };
+};
