@@ -81,6 +81,10 @@ const NAV: { view: View["name"]; label: string }[] = [
 export function Shell() {
   const { view, go } = useApp();
   const active = view.name === "weed" ? "weeds" : view.name;
+  // Every screen opens at its top, not at the previous screen's scroll position.
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [view]);
   return (
     <div className="shell">
       <aside className="rail">
