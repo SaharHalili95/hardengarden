@@ -15,7 +15,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  UV_FROZEN: "1"          # never re-resolve; uv.lock is the source of truth
+  UV_LOCKED: "1"          # fail if uv.lock is out of date; never re-resolve
   PYTHON_VERSION: "3.12"
   GITLEAKS_VERSION: "8.30.1"
 
@@ -37,7 +37,7 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
           enable-cache: true
           cache-dependency-glob: backend/uv.lock
-      - run: uv sync --locked
+      - run: uv sync
       - run: uv run ruff check --output-format=github .
       - run: uv run ruff format --check .
 
@@ -54,7 +54,7 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
           enable-cache: true
           cache-dependency-glob: backend/uv.lock
-      - run: uv sync --locked
+      - run: uv sync
       - run: uv run mypy
 
   test:
@@ -70,7 +70,7 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
           enable-cache: true
           cache-dependency-glob: backend/uv.lock
-      - run: uv sync --locked
+      - run: uv sync
       - run: uv run pytest
       - name: Build wheel (pure Python, no native build; R34)
         run: uv build --wheel
@@ -88,7 +88,7 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
           enable-cache: true
           cache-dependency-glob: backend/uv.lock
-      - run: uv sync --locked
+      - run: uv sync
       - name: bandit
         run: uv run bandit -c pyproject.toml -r hardengarden
       - name: pip-audit (all locked dependencies, hash-verified)
