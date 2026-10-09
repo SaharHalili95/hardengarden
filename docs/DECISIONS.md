@@ -241,3 +241,39 @@ Format: **ADR-NNN — Title** · Date · Status · Context · Decision · Conseq
   count reported by Ollama is shown.
 - AI states add **Model not downloaded** to the five states named in the spec; the UI needs
   it to offer the download dialog.
+
+## ADR-016 — Runtime dependencies: fastapi and uvicorn
+
+- **Date:** 2026-10-09 · **Status:** Accepted (named in docs/REQUIREMENTS.md section 2)
+- **Why:** The local API the desktop app talks to. Plain `uvicorn` (not `[standard]`) is
+  declared; chromadb already pulls the extras transitively.
+- **License / maintenance:** both BSD-3/MIT and actively maintained. FastAPI brings Starlette
+  and `opentelemetry-api` (API only, no exporter is configured, so nothing is sent).
+- **Dev only:** `httpx` and `httpx2` for test clients. Starlette 1.7 deprecates `httpx` in
+  its TestClient in favour of `httpx2` (pydantic/httpx2, BSD-3), and the test suite treats
+  warnings as errors.
+
+## ADR-017 — Local API design
+
+- **Date:** 2026-10-09 · **Status:** Accepted
+- **Sidecar protocol:** the server binds 127.0.0.1:0 itself (no port race), generates a
+  per-launch token (`secrets.token_urlsafe(32)`), and prints one JSON line
+  `{"event":"ready","port":N,"token":"..."}` on stdout. The token never touches disk or logs.
+  With `--watch-stdin` it exits when the parent closes the pipe, so it never outlives the app.
+- **Defence in depth, outermost first:** Host header must be loopback (DNS rebinding) →
+  request bodies read and capped at 64 KiB (413) → per-route token buckets (429) → CORS
+  limited to the Tauri origins (plus `--dev-origin`, loopback http only) → access log (method,
+  path, status, duration; never headers or bodies, redacted JSON) → bearer token on every
+  route except `/health`.
+- **No browsable schema:** `/docs`, `/redoc` and `/openapi.json` are disabled; the schema
+  is still generated and snapshot-tested.
+- **Streaming:** `/explain`, `/chat` and `/ai/pull` return NDJSON. The blocking work runs in a
+  worker thread; when the client disconnects (the UI's Stop button) the generation or download
+  is cancelled immediately.
+- **Endpoints beyond the six named in Phase 4**, needed by Phase 5 screens: `GET
+  /remediation/{id}` (script as text), `GET /ai/status`, `POST /ai/pull` (body must contain
+  `"consent": true`), `GET/PUT /settings` (validated, loopback-only Ollama URL), `POST
+  /kb/ingest`. None reads a client-chosen path or runs a client-chosen command (R8).
+- **Fixed in this phase:** postponed annotations broke FastAPI's dependency resolution
+  (auth became a query parameter); the stream sanitizer was line-buffered, so one-paragraph
+  answers did not stream (now streams within a line, with safe cut points).
