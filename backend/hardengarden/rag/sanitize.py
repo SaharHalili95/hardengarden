@@ -1,7 +1,7 @@
 """Output safety for LLM text (R12, R15): plain text only, no runnable commands, no links.
 
-The same rules run on the live token stream (line by line) and on the final answer, so what
-the user sees while the answer streams is already sanitized.
+The same rules run on the live token stream and on the final answer, so what the user sees
+while the answer streams is already sanitized.
 """
 
 from __future__ import annotations
@@ -31,47 +31,110 @@ _UNTRUSTED_TAG = re.compile(
 )
 
 
+# First words that make a line look like a shell command, judged as soon as the first word
+# is complete so the rest of the line is never streamed to the user.
+_COMMAND_START = re.compile(
+    r"^\s*(?:[$#>](?:\s|$)|(?:sudo|su|sh|bash|zsh|curl|wget|chmod|chown|rm|echo|sed|tee|dd|"
+    r"systemctl|apt|apt-get|ufw|nft|iptables|usermod|useradd|userdel|passwd|visudo|sysctl|"
+    r"cat|mkfs|kill|pkill|crontab)\b)",
+    re.I,
+)
+
+
+def sanitize_fragment(text: str) -> str:
+    """Rules that apply inside prose: tags, links, URLs, HTML and inline commands."""
+    text = _UNTRUSTED_TAG.sub("", text)
+    text = _MD_LINK.sub(lambda m: m.group(1), text)
+    text = _URL.sub(LINK_REMOVED, text)
+    text = _HTML_TAG.sub("", text)
+    return _INLINE_COMMAND.sub(COMMAND_REMOVED, text)
+
+
 def sanitize_line(line: str) -> str:
-    if _COMMAND_LINE.match(line):
+    if _COMMAND_LINE.match(line) or _COMMAND_START.match(line):
         return COMMAND_REMOVED
-    line = _UNTRUSTED_TAG.sub("", line)
-    line = _MD_LINK.sub(lambda m: m.group(1), line)
-    line = _URL.sub(LINK_REMOVED, line)
-    line = _HTML_TAG.sub("", line)
-    return _INLINE_COMMAND.sub(COMMAND_REMOVED, line)
+    return sanitize_fragment(line)
+
+
+def _safe_cut(text: str) -> int:
+    """Index up to which ``text`` can be emitted now: the last space before anything that is
+    still open (an inline code span, a [link](...), an <html tag) and might change meaning."""
+    cut = max(text.rfind(" "), text.rfind("\t")) + 1
+    holds: list[int] = []
+    if text.count("`") % 2:
+        holds.append(text.rfind("`"))
+    bracket = text.rfind("[")
+    if bracket != -1 and (
+        "]" not in text[bracket:]
+        or ("](" in text[bracket:] and ")" not in text[text.index("](", bracket) :])
+    ):
+        holds.append(bracket)
+    angle = text.rfind("<")
+    if angle != -1 and ">" not in text[angle:]:
+        holds.append(angle)
+    if holds:
+        cut = min(cut, *holds)
+    return max(cut, 0)
 
 
 class StreamSanitizer:
-    """Line-buffered sanitizer for streamed tokens. Code fences are dropped entirely."""
+    """Streams sanitized text as tokens arrive, without waiting for whole lines.
+
+    Each line is classified once its first word is complete: command-looking lines are
+    suppressed entirely (one placeholder at the end of the line); code fences drop
+    everything until they close; prose is emitted up to the last safe cut point.
+    """
 
     def __init__(self) -> None:
         self._buffer = ""
         self._in_fence = False
+        self._state: str | None = None  # None (unclassified), "prose" or "command"
+        self._fence_candidate = False
 
-    def _emit_line(self, line: str) -> str | None:
-        if _FENCE.match(line):
+    def _finish_line(self, rest: str, newline: str) -> str:
+        state, self._state = self._state, None
+        if state is None and _FENCE.match(rest):
             self._in_fence = not self._in_fence
-            return COMMAND_REMOVED if self._in_fence else None
+            return COMMAND_REMOVED + newline if self._in_fence else ""
         if self._in_fence:
-            return None
-        return sanitize_line(line)
+            return ""
+        if state == "command" or (
+            state is None and (_COMMAND_LINE.match(rest) or _COMMAND_START.match(rest))
+        ):
+            return COMMAND_REMOVED + newline
+        return sanitize_fragment(rest) + newline
+
+    def _partial(self) -> str:
+        if self._in_fence:
+            return ""
+        if self._state is None:
+            stripped = self._buffer.lstrip()
+            if stripped.startswith(("`", "~")) or not re.match(r"\s*\S+\s", self._buffer):
+                return ""  # wait: possible fence, or first word still incomplete
+            is_command = _COMMAND_LINE.match(self._buffer) or _COMMAND_START.match(self._buffer)
+            self._state = "command" if is_command else "prose"
+        if self._state == "command":
+            return ""
+        cut = _safe_cut(self._buffer)
+        if cut <= 0:
+            return ""
+        emitted, self._buffer = self._buffer[:cut], self._buffer[cut:]
+        return sanitize_fragment(emitted)
 
     def feed(self, text: str) -> str:
         self._buffer += text
         out: list[str] = []
         while "\n" in self._buffer:
             line, self._buffer = self._buffer.split("\n", 1)
-            emitted = self._emit_line(line)
-            if emitted is not None:
-                out.append(emitted + "\n")
+            out.append(self._finish_line(line, "\n"))
+        out.append(self._partial())
         return "".join(out)
 
     def flush(self) -> str:
         rest, self._buffer = self._buffer, ""
-        if not rest:
+        if not rest and self._state is None:
             return ""
-        emitted = self._emit_line(rest)
-        return emitted or ""
+        return self._finish_line(rest, "")
 
 
 def sanitize_text(text: str) -> str:

