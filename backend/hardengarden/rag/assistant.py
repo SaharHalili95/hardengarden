@@ -143,13 +143,16 @@ class ModelPull:
 
     def __init__(self, stream: NDJSONStream) -> None:
         self._stream = stream
+        self._cancelled = False
 
     def cancel(self) -> None:
+        self._cancelled = True
         self._stream.abort()
 
     @property
     def cancelled(self) -> bool:
-        return self._stream.aborted
+        """True only after an explicit cancel(), not after a normal finish."""
+        return self._cancelled
 
     def __iter__(self) -> Iterator[PullProgress]:
         for item in self._stream:
