@@ -277,3 +277,69 @@ Format: **ADR-NNN — Title** · Date · Status · Context · Decision · Conseq
 - **Fixed in this phase:** postponed annotations broke FastAPI's dependency resolution
   (auth became a query parameter); the stream sanitizer was line-buffered, so one-paragraph
   answers did not stream (now streams within a line, with safe cut points).
+
+## ADR-018 — Desktop UI toolchain and runtime dependencies
+
+- **Date:** 2026-10-09 · **Status:** Accepted
+- **Package manager: pnpm** (pinned through `packageManager`, enabled with corepack). npm's
+  installer crashed on this lockfile in the build environment; pnpm also gives a strict,
+  non-hoisted `node_modules`, and `.npmrc` sets `ignore-scripts=true` so no dependency runs
+  install scripts. CI installs with `--frozen-lockfile` and runs `pnpm audit`.
+- **React 18.3.1, not 19:** Section 2 fixes React 18; Dependabot ignores React majors.
+- **TypeScript 5.9.3, not 7:** typescript-eslint 8 does not support TypeScript 7 yet. Revisit
+  when it does.
+- **Runtime dependencies** (everything else is dev-only tooling):
+  - `react`, `react-dom` (MIT, Meta, active): the UI framework fixed by Section 2.
+  - `@tauri-apps/api` (Apache-2.0/MIT, Tauri, active): the only way the UI can call the shell
+    (`backend_status`). Alternative: none; required by Tauri v2.
+  - `@tauri-apps/plugin-clipboard-manager` (Apache-2.0/MIT, Tauri, active): the "Copy script"
+    button. `navigator.clipboard` is unreliable in WebKitGTK without a user-gesture permission
+    model; the plugin is limited to write-text by the capability file.
+  - `@fontsource-variable/recursive` (font: SIL OFL 1.1; package MIT, active): the font is
+    bundled into the app so the UI never loads remote fonts (R7). Alternative: system fonts;
+    rejected for the design reasons in ADR-020.
+- **Rust:** `tauri`, `tauri-build`, `tauri-plugin-clipboard-manager` (Apache-2.0/MIT, active),
+  `serde`, `serde_json` (MIT/Apache-2.0, active). The shell uses only the standard library
+  for the process lifecycle and the health check (no HTTP client crate). The toolchain is
+  pinned in `src-tauri/rust-toolchain.toml`.
+- **`@tauri-apps/cli`** is a dev dependency so the build uses a locked CLI version.
+
+## ADR-019 — Sidecar packaging and the desktop capability
+
+- **Date:** 2026-10-09 · **Status:** Accepted
+- **Problem:** Tauri's `externalBin` sidecar mechanism expects one executable file, which only
+  PyInstaller `--onefile` produces. R32 forbids `--onefile` (it self-extracts into `/tmp`).
+- **Decision:** the PyInstaller `--onedir` folder is shipped as a bundle **resource**
+  (`binaries/hardengarden-sidecar/` → `sidecar/`) and started by the Rust shell with
+  `std::process::Command` (fixed path, fixed arguments `serve --watch-stdin`, no shell).
+- **Capability:** the webview gets exactly one permission, `clipboard-manager:allow-write-text`.
+  It gets no `shell` permission at all: the webview cannot start, stop or talk to processes;
+  only the Rust side starts the scanner. This is stricter than "sidecar + clipboard write" in
+  Phase 5, because the sidecar permission would let compromised UI code spawn it with other
+  arguments.
+- **Lifecycle (R35):** handshake line on stdout → `/health` polled over loopback → `Ready`
+  with port and token. Any failure within 15 s (cannot start, exit code, bad handshake, no
+  healthy answer) becomes `Failed` with the last 40 stderr lines, which the UI shows with the
+  `uv`/`pipx` fallback. After start, a watcher reports a crash the same way. On exit the shell
+  closes the scanner's stdin (the scanner exits on EOF) and kills it after 3 s if needed; if the
+  shell itself is killed, the closed pipe still stops the scanner (verified: no orphan process
+  after SIGTERM).
+- **`HARDENGARDEN_SIDECAR`** overrides the scanner path. It exists for the Phase 6 failure test.
+  Anyone able to set this variable for the user's session can already run code as that user,
+  so it adds no privilege (threat model DS-3).
+
+## ADR-020 — Desktop design system ("garden survey")
+
+- **Date:** 2026-10-09 · **Status:** Accepted
+- The UI is modelled on a field survey of a garden bed: each check is a plant in the bed, and
+  the plant's form carries its status, so status never depends on colour alone (WCAG 1.4.1):
+  sprout = PASS, thistle = FAIL ("Weed"), drooping = WARN ("Needs care"), seed = SKIPPED
+  ("Not checked"), withered = ERROR, dashed soil = NOT_APPLICABLE. Each glyph is paired with
+  its word wherever it appears.
+- **Palette** (light / dark tokens in `src/styles.css`): lichen `#e9eee6` background, leaf-paper
+  `#f7f9f4` surfaces, moss `#1f2b22` text, thistle `#8b2f6f` for failures, pollen `#6f5300` for
+  warnings, fern `#2b6537` for healthy. Contrast is checked by axe in both schemes in the E2E
+  suite (zero serious violations).
+- **Type:** one family, Recursive (variable), bundled locally. Its casual axis is used for
+  headings, its linear form for body text and its monospace axis for evidence and scripts.
+- **Strict CSP without `'unsafe-inline'`:** no inline styles anywhere; components use classes.
