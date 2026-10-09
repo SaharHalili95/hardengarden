@@ -1,0 +1,124 @@
+[project]
+name = "hardengarden"
+description = "AI-assisted Linux hardening auditor. Your system is a garden; HardenGarden finds the weeds."
+readme = "README.md"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+authors = [{ name = "Sahar Halili" }]
+requires-python = ">=3.12"
+dynamic = ["version"]
+classifiers = [
+  "Development Status :: 2 - Pre-Alpha",
+  "Environment :: Console",
+  "Intended Audience :: System Administrators",
+  "Operating System :: POSIX :: Linux",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Security",
+  "Typing :: Typed",
+]
+# Runtime dependencies are added only in the phase that needs them,
+# each with a justification in docs/DECISIONS.md (docs/REQUIREMENTS.md section 2, R29).
+dependencies = []
+
+[project.urls]
+Repository = "https://github.com/SaharHalili95/hardengarden"
+Issues = "https://github.com/SaharHalili95/hardengarden/issues"
+
+[dependency-groups]
+dev = [
+  "bandit>=1.8",
+  "mypy>=1.13",
+  "pip-audit>=2.7",
+  "pre-commit>=4.0",
+  "pytest>=8.3",
+  "pytest-cov>=6.0",
+  "ruff>=0.8",
+]
+
+[build-system]
+requires = ["hatchling>=1.26"]
+build-backend = "hatchling.build"
+
+[tool.hatch.version]
+path = "hardengarden/__init__.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["hardengarden"]
+exclude = ["**/.gitkeep"]
+
+# ---------------------------------------------------------------- ruff
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+src = ["hardengarden", "tests"]
+
+[tool.ruff.lint]
+select = [
+  "E", "W",   # pycodestyle
+  "F",        # pyflakes
+  "I",        # isort
+  "N",        # pep8-naming
+  "UP",       # pyupgrade
+  "B",        # bugbear
+  "S",        # flake8-bandit (second layer next to bandit, ADR-002 item 9)
+  "A",        # builtins shadowing
+  "C4",       # comprehensions
+  "DTZ",      # timezone-aware datetimes
+  "T20",      # no print in library code
+  "PT",       # pytest style
+  "RET", "SIM", "PTH", "TRY", "PL", "RUF",
+  "ANN",      # annotations everywhere
+  "BLE",      # no blind except
+  "ERA",      # no commented-out code
+  "PGH",      # no blanket noqa / type: ignore (R24)
+  "FIX",      # no TODO/FIXME/XXX/HACK (R23)
+  "TD",
+]
+
+[tool.ruff.lint.per-file-ignores]
+# assert is the pytest idiom; S101 only matters in shipped code.
+"tests/**" = ["S101"]
+
+[tool.ruff.format]
+quote-style = "double"
+
+# ---------------------------------------------------------------- mypy
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_unreachable = true
+warn_unused_configs = true
+enable_error_code = ["ignore-without-code", "redundant-expr", "truthy-bool"]
+files = ["hardengarden", "tests"]
+
+# ---------------------------------------------------------------- pytest
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests"]
+addopts = [
+  "-ra",
+  "--strict-markers",
+  "--strict-config",
+  "--import-mode=importlib",
+  "--cov=hardengarden",
+  "--cov-branch",
+  "--cov-report=term-missing",
+]
+xfail_strict = true
+filterwarnings = ["error"]
+
+[tool.coverage.run]
+branch = true
+source = ["hardengarden"]
+
+[tool.coverage.report]
+# Project-wide floor. Per-package gates (core/checks >= 90 %, api >= 85 %)
+# are enforced in the phase that introduces them. Never lowered (R22).
+fail_under = 85
+show_missing = true
+skip_covered = false
+
+# ---------------------------------------------------------------- bandit
+[tool.bandit]
+targets = ["hardengarden"]
+exclude_dirs = ["tests"]
