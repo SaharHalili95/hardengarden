@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+APPLY="${HG_APPLY:-0}"
+say() { printf '[hardengarden] %s\n' "$*"; }
+die() { printf '[hardengarden] ERROR: %s\n' "$*" >&2; exit 1; }
+
+[ "$(id -u)" -eq 0 ] || die "run as root (for example: sudo HG_APPLY=1 bash $0)"
+
+group=root
+mode=0600
+if getent group shadow >/dev/null; then group=shadow; mode=0640; fi
+
+changed=0
+for file in /etc/shadow /etc/shadow-; do
+    [ -e "$file" ] || continue
+    [ -L "$file" ] && die "$file is a symbolic link; inspect it manually"
+    before="$(stat -c '%a %U:%G' "$file")"
+    want="$(printf '%o' "$((8#$mode))") root:$group"
+    if [ "$before" = "$want" ]; then
+        say "$file is already $want"
+        continue
+    fi
+    changed=1
+    if [ "$APPLY" != "1" ]; then
+        say "DRY RUN: would change $file from $before to $want"
+        continue
+    fi
+    say "Recording previous state of $file: $before"
+    chown "root:$group" "$file"
+    chmod "$mode" "$file"
+    say "Changed $file: $before -> $(stat -c '%a %U:%G' "$file")"
+done
+
+if [ "$changed" -eq 0 ]; then say "Nothing to do."; exit 0; fi
+if [ "$APPLY" != "1" ]; then say "Nothing was changed. Re-run with HG_APPLY=1 to apply."; exit 0; fi
+say "Done. If the file was readable by others, treat the password hashes as exposed and change the passwords."

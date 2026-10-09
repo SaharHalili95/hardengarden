@@ -1,0 +1,72 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+APPLY="${HG_APPLY:-0}"
+STAMP="$(date +%Y%m%d%H%M%S)"
+say() { printf '[hardengarden] %s\n' "$*"; }
+die() { printf '[hardengarden] ERROR: %s\n' "$*" >&2; exit 1; }
+
+[ "$(id -u)" -eq 0 ] || die "run as root (for example: sudo HG_APPLY=1 bash $0)"
+command -v visudo >/dev/null 2>&1 || die "visudo not found; is sudo installed?"
+
+# sudo skips files in an includedir whose names contain '.' or end with '~'.
+files=(/etc/sudoers)
+if [ -d /etc/sudoers.d ]; then
+    while IFS= read -r -d '' f; do
+        case "$(basename "$f")" in *.*|*~) continue ;; esac
+        files+=("$f")
+    done < <(find /etc/sudoers.d -maxdepth 1 -type f -print0 | sort -z)
+fi
+
+pattern='NOPASSWD[[:space:]]*:|^[[:space:]]*Defaults.*![[:space:]]*authenticate'
+affected=()
+for f in "${files[@]}"; do
+    if grep -Eq "$pattern" "$f" && grep -Ev '^[[:space:]]*#' "$f" | grep -Eq "$pattern"; then
+        affected+=("$f")
+    fi
+done
+if [ "${#affected[@]}" -eq 0 ]; then
+    say "No passwordless sudo rules found. Nothing to do."
+    exit 0
+fi
+
+say "Passwordless sudo rules:"
+for f in "${affected[@]}"; do
+    grep -nE "$pattern" "$f" | grep -Ev '^[0-9]+:[[:space:]]*#' | sed "s|^|  $f:|"
+done
+
+# Lock-out guard: users named in these rules need a usable password to keep using sudo.
+mapfile -t users < <(grep -hE 'NOPASSWD[[:space:]]*:' "${affected[@]}" | grep -Ev '^[[:space:]]*#' | awk '{ print $1 }' | grep -v '^%' | sort -u)
+for user in "${users[@]}"; do
+    getent passwd "$user" >/dev/null || continue
+    state="$(passwd -S "$user" 2>/dev/null | awk '{ print $2 }')"
+    if [ "$state" != "P" ] && [ "${HG_FORCE:-0}" != "1" ]; then
+        die "user '$user' has no usable password (status '$state'); set one with 'passwd $user' first, or set HG_FORCE=1"
+    fi
+done
+
+if [ "$APPLY" != "1" ]; then
+    say "DRY RUN: would remove the NOPASSWD: tag (keeping the rule) and comment out '!authenticate' defaults."
+    say "DRY RUN: every edited file is validated with 'visudo -c' before it replaces the original."
+    say "Nothing was changed. Re-run with HG_APPLY=1 to apply."
+    exit 0
+fi
+
+for f in "${affected[@]}"; do
+    tmp="$(mktemp)"
+    sed -E -e '/^[[:space:]]*#/b' \
+        -e 's/NOPASSWD[[:space:]]*:[[:space:]]*//g' \
+        -e 's/^([[:space:]]*Defaults.*![[:space:]]*authenticate.*)$/# \1  # disabled by HardenGarden/' \
+        "$f" > "$tmp"
+    if ! visudo -cf "$tmp" >/dev/null; then
+        rm -f "$tmp"
+        die "visudo rejected the edited copy of $f; nothing was changed in that file"
+    fi
+    cp -a "$f" "$f.hardengarden-bak.$STAMP"
+    chown root:root "$tmp"
+    chmod 0440 "$tmp"
+    mv "$tmp" "$f"
+    say "Updated $f (backup: $f.hardengarden-bak.$STAMP)"
+done
+visudo -c >/dev/null || die "visudo -c reports a problem; restore the .hardengarden-bak files"
+say "Done. Keep this root shell open and test 'sudo -v' in a new session."
