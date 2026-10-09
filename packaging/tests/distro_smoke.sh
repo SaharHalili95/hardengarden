@@ -10,7 +10,7 @@ set -euo pipefail
 
 ARTIFACTS=/artifacts
 SMOKE=/repo/packaging/tests/smoke_scanner.py
-SCANNER=/usr/lib/HardenGarden/sidecar/hardengarden-sidecar
+SCANNER=/usr/bin/hardengarden  # symlink to /usr/lib/HardenGarden/sidecar/hardengarden-sidecar
 PIPX_SCANNER=/root/.local/bin/hardengarden
 export PIPX_HOME=/root/.local/share/pipx PIPX_BIN_DIR=/root/.local/bin
 export DEBIAN_FRONTEND=noninteractive
@@ -38,6 +38,8 @@ install_all() {
   dpkg -s hardengarden | grep -E '^(Version|Depends):'
   dpkg -s hardengarden | grep -q '^Depends:.*libwebkit2gtk-4.1-0' || die "Depends lacks webkit"
   dpkg -s hardengarden | grep -q '^Depends:.*libgtk-3-0' || die "Depends lacks GTK"
+  [[ "$(command -v hardengarden)" == /usr/bin/hardengarden ]] || die "the .deb did not put hardengarden on PATH"
+  hardengarden --version
 
   say "pipx install of the release wheel (R34)"
   local python=python3

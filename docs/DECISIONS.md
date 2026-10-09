@@ -362,8 +362,8 @@ Format: **ADR-NNN — Title** · Date · Status · Context · Decision · Conseq
   `packaging/check_glibc.sh` fails a build that needs a newer symbol; checked against a
   negative control (a binary built on Ubuntu 24.04 needs glibc 2.39 and is rejected).
 - **Debian package name:** Tauri derives it from the product name (`harden-garden`); the
-  build repacks it as `hardengarden` with `dpkg-deb`, without changing contents or
-  dependencies. `Depends:` (libwebkit2gtk-4.1-0, libgtk-3-0) comes from Tauri and is
+  build repacks it as `hardengarden` with `dpkg-deb`, without changing dependencies, and
+  adds one symlink, `/usr/bin/hardengarden`, so `.deb` users also get the CLI. `Depends:` (libwebkit2gtk-4.1-0, libgtk-3-0) comes from Tauri and is
   asserted by the distro smoke test (R33).
 - **AppImage runtime pinned:** the AppImage loader is downloaded from the tagged
   `AppImage/type2-runtime` release `20251108` and checked against a SHA-256 recorded when the

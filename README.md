@@ -44,7 +44,8 @@ Every file is signed; see [Verify a download](#verify-a-download).
 VERSION=0.1.0
 curl -LO "https://github.com/SaharHalili95/hardengarden/releases/download/v${VERSION}/hardengarden_${VERSION}_amd64.deb"
 sudo apt install "./hardengarden_${VERSION}_amd64.deb"
-hardengarden-desktop
+hardengarden-desktop        # the app
+hardengarden scan           # the .deb also installs the command-line scanner
 ```
 
 Or the AppImage, which needs nothing installed (FUSE is used if available):

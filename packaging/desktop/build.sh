@@ -43,9 +43,11 @@ bundle=src-tauri/target/release/bundle
 mkdir -p "$out"
 
 # Tauri names the Debian package after the product name in kebab case ("harden-garden").
-# Repack it under the project's name; contents and dependencies are unchanged.
+# Repack it under the project's name; dependencies are unchanged.
 dpkg-deb -R "$bundle/deb/HardenGarden_${version}_amd64.deb" "$work/pkg"
 sed -i 's/^Package: .*/Package: hardengarden/' "$work/pkg/DEBIAN/control"
+# Also install the command-line scanner on PATH, like the pipx install provides.
+ln -s ../lib/HardenGarden/sidecar/hardengarden-sidecar "$work/pkg/usr/bin/hardengarden"
 dpkg-deb --root-owner-group -Zxz -b "$work/pkg" "$out/hardengarden_${version}_amd64.deb"
 
 cp -v "$bundle/appimage/HardenGarden_${version}_amd64.AppImage" \
