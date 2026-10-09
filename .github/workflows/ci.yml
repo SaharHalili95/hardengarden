@@ -39,8 +39,8 @@ jobs:
           enable-cache: true
           cache-dependency-glob: backend/uv.lock
       - run: uv sync
-      - run: uv run ruff check --output-format=github .
-      - run: uv run ruff format --check .
+      - run: uv run ruff check --output-format=github . ../packaging
+      - run: uv run ruff format --check . ../packaging
 
   typecheck:
     name: Type-check (mypy --strict)
@@ -57,6 +57,8 @@ jobs:
           cache-dependency-glob: backend/uv.lock
       - run: uv sync
       - run: uv run mypy
+      - name: mypy --strict on the release scripts
+        run: uv run mypy --strict ../packaging
 
   test:
     name: Tests (pytest + coverage)
@@ -78,8 +80,12 @@ jobs:
           uv run coverage report --include='hardengarden/core/*' --fail-under=90
           uv run coverage report --include='hardengarden/checks/*' --fail-under=90
           uv run coverage report --include='hardengarden/api/*' --fail-under=85
-      - name: shellcheck all remediation templates
-        run: shellcheck -x hardengarden/remediation/templates/*.sh
+      - name: shellcheck all remediation templates and release scripts
+        run: shellcheck -x hardengarden/remediation/templates/*.sh ../packaging/*.sh ../packaging/*/*.sh
+      - name: Release script tests and version consistency
+        run: |
+          uv run pytest ../packaging/tests --no-cov -p no:cacheprovider
+          python3 ../packaging/check_versions.py
       - name: Live scan of the runner (real Ubuntu 24.04, unprivileged)
         run: uv run hardengarden scan
       - name: Build wheel (pure Python, no native build; R34)
@@ -130,6 +136,29 @@ jobs:
           uv run pip-audit -r "$RUNNER_TEMP/requirements.txt" --disable-pip --require-hashes --strict \
             --ignore-vuln GHSA-f4j7-r4q5-qw2c --ignore-vuln GHSA-36p7-vc44-83pf \
             --ignore-vuln GHSA-xph7-9rjv-w5fr --ignore-vuln GHSA-2wm9-hf6c-p5cr
+
+  trivy:
+    name: Trivy (lockfiles, fail on HIGH/CRITICAL)
+    # Same scan as the release gate; PRs to main and manual runs only (R30).
+    if: (github.event_name == 'pull_request' && github.base_ref == 'main') || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
+        with:
+          cosign-release: v3.1.3
+      - name: Install Trivy (signature and checksum verified)
+        run: packaging/install_trivy.sh "$RUNNER_TEMP/trivy"
+      - name: Scan every lockfile (Python, npm, Rust)
+        run: >
+          "$RUNNER_TEMP/trivy/trivy" fs --scanners vuln --severity HIGH,CRITICAL
+          --ignorefile .trivyignore.yaml --exit-code 1 .
 
   gitleaks:
     name: Secret scan (gitleaks)

@@ -47,6 +47,10 @@ dev = [
   "ruff>=0.8",
   "types-pyyaml>=6",
 ]
+# Release builds only: freezes the scanner into the desktop app's --onedir sidecar (ADR-021).
+packaging = [
+  "pyinstaller>=6.22.3",
+]
 
 [build-system]
 requires = ["hatchling>=1.26"]

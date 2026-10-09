@@ -28,7 +28,7 @@ const meta = checks.map(([id, title, severity, category]) => ({
 const scan = {
   id: "22222222-2222-2222-2222-222222222222",
   report: {
-    tool_version: "0.0.1",
+    tool_version: "0.1.0",
     scanned_root: "/",
     platform: {
       distro_id: "ubuntu",
