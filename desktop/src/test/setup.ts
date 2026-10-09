@@ -11,3 +11,6 @@ if (typeof HTMLDialogElement !== "undefined" && !("showModal" in HTMLDialogEleme
     },
   });
 }
+
+// jsdom does not implement scrolling; the app only uses it to reset the position on navigation.
+if (typeof window !== "undefined") window.scrollTo = () => undefined;

@@ -60,3 +60,4 @@ sbom*.json
 *.swp
 desktop/src-tauri/gen/
 *.tsbuildinfo
+/report.json

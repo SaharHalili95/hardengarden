@@ -362,8 +362,8 @@ Format: **ADR-NNN — Title** · Date · Status · Context · Decision · Conseq
   `packaging/check_glibc.sh` fails a build that needs a newer symbol; checked against a
   negative control (a binary built on Ubuntu 24.04 needs glibc 2.39 and is rejected).
 - **Debian package name:** Tauri derives it from the product name (`harden-garden`); the
-  build repacks it as `hardengarden` with `dpkg-deb`, without changing contents or
-  dependencies. `Depends:` (libwebkit2gtk-4.1-0, libgtk-3-0) comes from Tauri and is
+  build repacks it as `hardengarden` with `dpkg-deb`, without changing dependencies, and
+  adds one symlink, `/usr/bin/hardengarden`, so `.deb` users also get the CLI. `Depends:` (libwebkit2gtk-4.1-0, libgtk-3-0) comes from Tauri and is
   asserted by the distro smoke test (R33).
 - **AppImage runtime pinned:** the AppImage loader is downloaded from the tagged
   `AppImage/type2-runtime` release `20251108` and checked against a SHA-256 recorded when the
@@ -392,3 +392,17 @@ Format: **ADR-NNN — Title** · Date · Status · Context · Decision · Conseq
   scanner tests with `/tmp` mounted `noexec` (R32). WebKitGTK's sandbox is disabled in these
   containers only (no user namespaces); the shipped app never disables it.
 - **Release notes** are generated from Conventional Commits and state the build glibc.
+
+## ADR-022 — Documentation checks
+
+- **Date:** 2026-10-09 · **Status:** Accepted
+- **Link checker:** `docs/tools/check_links.py` (standard library) instead of a third-party
+  checker such as lychee: no new binary to pin and verify, and it checks heading anchors with
+  GitHub's rules, which is where most broken internal links come from. Internal links run on
+  every push; external links on pull requests to `main` (network-dependent). 401/403/429 are
+  warnings because some documentation sites block automated clients.
+- **README commands:** every shell block in the README carries a marker, `run` or `skip`
+  with a reason. `docs/tools/readme_commands.py` fails on an unmarked block and runs the
+  `run` blocks in CI after installing the CLI from a freshly built wheel. Blocks that need a
+  published release, sudo, Ollama or the desktop toolchain are skipped with the name of the
+  job that tests the same thing.

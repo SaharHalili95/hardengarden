@@ -193,7 +193,22 @@ for (const colorScheme of ["light", "dark"] as const) {
     expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(SCRIPT);
     await expectNoSeriousA11yIssues(page);
     await expectNoHorizontalPageScroll(page);
+    // Navigation stays reachable on a long page.
+    await page.evaluate(() => {
+      window.scrollTo(0, document.documentElement.scrollHeight);
+    });
+    expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
+    await expect(page.getByRole("navigation", { name: "Main" })).toBeInViewport();
+    await page.screenshot({ path: `test-results/weed-detail-scrolled-${colorScheme}.png` });
     await page.screenshot({ path: `test-results/weed-detail-${colorScheme}.png`, fullPage: true });
+
+    // A new screen opens at its top, not at the previous screen's scroll position.
+    await page
+      .getByRole("navigation", { name: "Main" })
+      .getByRole("button", { name: "Settings" })
+      .click();
+    await expect(page.getByRole("heading", { level: 1, name: "Settings" })).toBeInViewport();
+    expect(await page.evaluate(() => window.scrollY)).toBe(0);
 
     expect(requests).toEqual(
       expect.arrayContaining([

@@ -154,6 +154,11 @@ pre,
   gap: 1.5rem;
   padding: 1.5rem 1rem;
   border-right: 1px solid var(--furrow);
+  /* Navigation and AI status stay in view while a long page scrolls. */
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
 }
 
 .brand {
@@ -532,6 +537,8 @@ dialog::backdrop {
   }
 
   .rail {
+    position: static;
+    height: auto;
     border-right: 0;
     border-bottom: 1px solid var(--furrow);
   }
