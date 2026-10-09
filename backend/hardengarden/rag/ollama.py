@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import contextlib
 import http.client
 import json
 import socket
+import threading
 from collections.abc import Iterator
 from dataclasses import dataclass
 from typing import Any
@@ -73,7 +75,7 @@ class OllamaClient:
 
     def _open(
         self, method: str, path: str, body: dict[str, Any] | None, timeout: float
-    ) -> tuple[http.client.HTTPConnection, http.client.HTTPResponse]:
+    ) -> tuple[http.client.HTTPConnection, http.client.HTTPResponse, socket.socket | None]:
         conn = self._connection(timeout)
         payload = json.dumps(body).encode() if body is not None else None
         headers = {"Content-Type": "application/json"} if payload else {}
@@ -83,6 +85,9 @@ class OllamaClient:
             conn.close()
             msg = f"Ollama is not reachable at {self.endpoint.url}. Is it installed and running?"
             raise OllamaUnavailableError(msg) from exc
+        # Keep our own reference: http.client sets conn.sock to None when the server
+        # will close the connection, but abort() must still be able to shut it down.
+        sock = conn.sock
         try:
             response = conn.getresponse()
         except (OSError, http.client.HTTPException) as exc:
@@ -94,7 +99,7 @@ class OllamaClient:
             conn.close()
             msg = f"Ollama returned HTTP {response.status}: {detail[:200]}"
             raise OllamaError(msg)
-        return conn, response
+        return conn, response, sock
 
     def request_json(
         self,
@@ -104,7 +109,7 @@ class OllamaClient:
         *,
         timeout: float | None = None,
     ) -> dict[str, Any]:
-        conn, response = self._open(method, path, body, timeout or self.timeout_s)
+        conn, response, _ = self._open(method, path, body, timeout or self.timeout_s)
         try:
             raw = response.read(MAX_RESPONSE_BYTES + 1)
         finally:
@@ -122,14 +127,91 @@ class OllamaClient:
             raise OllamaError(msg)
         return data
 
+    def open_stream(
+        self, path: str, body: dict[str, Any], *, timeout: float | None = None
+    ) -> NDJSONStream:
+        """Start a streaming request. The stream can be aborted from any thread."""
+        conn, response, sock = self._open("POST", path, body, timeout or self.timeout_s)
+        return NDJSONStream(conn, response, sock)
+
     def stream_json(
         self, path: str, body: dict[str, Any], *, timeout: float | None = None
     ) -> Iterator[dict[str, Any]]:
         """Yield one JSON object per NDJSON line. Closing the generator closes the socket."""
-        conn, response = self._open("POST", path, body, timeout or self.timeout_s)
+        stream = self.open_stream(path, body, timeout=timeout)
+        try:
+            yield from stream
+        finally:
+            stream.abort()
+
+    # ------------------------------------------------------------------ endpoints
+    def version(self) -> str:
+        return str(
+            self.request_json("GET", "/api/version", timeout=CONNECT_TIMEOUT_S).get("version", "")
+        )
+
+    def installed_models(self) -> list[str]:
+        data = self.request_json("GET", "/api/tags", timeout=CONNECT_TIMEOUT_S)
+        models = data.get("models", [])
+        return sorted(str(m.get("name", "")) for m in models if isinstance(m, dict))
+
+    def running(self) -> list[dict[str, Any]]:
+        """Models currently loaded (``/api/ps``), including ``size_vram`` when on a GPU."""
+        data = self.request_json("GET", "/api/ps", timeout=CONNECT_TIMEOUT_S)
+        return [m for m in data.get("models", []) if isinstance(m, dict)]
+
+    def embed(self, model: str, texts: list[str]) -> list[list[float]]:
+        data = self.request_json("POST", "/api/embed", {"model": model, "input": texts})
+        vectors = data.get("embeddings")
+        if not isinstance(vectors, list) or len(vectors) != len(texts):
+            msg = "Ollama returned an unexpected embedding payload"
+            raise OllamaError(msg)
+        return [[float(x) for x in v] for v in vectors]
+
+
+class NDJSONStream:
+    """Iterator over a streaming NDJSON response with a thread-safe ``abort()``.
+
+    ``abort()`` shuts the socket down, which unblocks a read that is waiting for the next
+    token. This is what makes Cancel and the hard timeout work immediately (R38).
+    """
+
+    def __init__(
+        self,
+        conn: http.client.HTTPConnection,
+        response: http.client.HTTPResponse,
+        sock: socket.socket | None = None,
+    ) -> None:
+        self._conn = conn
+        self._response = response
+        self._sock = sock
+        self._lock = threading.Lock()
+        self.aborted = False
+
+    def abort(self) -> None:
+        with self._lock:
+            if self.aborted:
+                return
+            self.aborted = True
+            sock = self._sock or self._conn.sock
+            if sock is not None:
+                with contextlib.suppress(OSError):
+                    sock.shutdown(socket.SHUT_RDWR)
+            self._conn.close()
+
+    def __iter__(self) -> Iterator[dict[str, Any]]:
         try:
             while True:
-                line = response.readline(MAX_RESPONSE_BYTES)
+                try:
+                    line = self._response.readline(MAX_RESPONSE_BYTES)
+                except (OSError, ValueError, http.client.HTTPException) as exc:
+                    if self.aborted:
+                        return
+                    if isinstance(exc, TimeoutError):
+                        msg = "Ollama did not respond in time"
+                        raise OllamaError(msg) from exc
+                    msg = f"Ollama stream failed: {type(exc).__name__}"
+                    raise OllamaError(msg) from exc
                 if not line:
                     return
                 if not line.strip():
@@ -144,30 +226,8 @@ class OllamaClient:
                         msg = f"Ollama error: {str(item['error'])[:200]}"
                         raise OllamaError(msg)
                     yield item
-        except TimeoutError as exc:
-            msg = "Ollama did not respond in time"
-            raise OllamaError(msg) from exc
         finally:
-            conn.close()
-
-    # ------------------------------------------------------------------ endpoints
-    def version(self) -> str:
-        return str(
-            self.request_json("GET", "/api/version", timeout=CONNECT_TIMEOUT_S).get("version", "")
-        )
-
-    def installed_models(self) -> list[str]:
-        data = self.request_json("GET", "/api/tags", timeout=CONNECT_TIMEOUT_S)
-        models = data.get("models", [])
-        return sorted(str(m.get("name", "")) for m in models if isinstance(m, dict))
-
-    def embed(self, model: str, texts: list[str]) -> list[list[float]]:
-        data = self.request_json("POST", "/api/embed", {"model": model, "input": texts})
-        vectors = data.get("embeddings")
-        if not isinstance(vectors, list) or len(vectors) != len(texts):
-            msg = "Ollama returned an unexpected embedding payload"
-            raise OllamaError(msg)
-        return [[float(x) for x in v] for v in vectors]
+            self.abort()
 
 
 class OllamaEmbedder:
