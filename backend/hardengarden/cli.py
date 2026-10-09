@@ -8,6 +8,7 @@ from typing import Annotated
 import typer
 
 from hardengarden import __version__
+from hardengarden.api.server import serve as run_server
 from hardengarden.checks import ALL_CHECKS
 from hardengarden.core.check import Check
 from hardengarden.core.engine import run_scan
@@ -359,6 +360,30 @@ def ai_pull(
         pull.cancel()
         typer.echo("Cancelled. Running the same command again resumes the download.")
         raise typer.Exit(code=1) from None
+
+
+@app.command()
+def serve(
+    root: Annotated[
+        Path, typer.Option("--root", help="Filesystem root to scan.", file_okay=False)
+    ] = Path("/"),
+    dev_origin: Annotated[
+        list[str] | None,
+        typer.Option(
+            "--dev-origin", help="Extra allowed origin for UI development (loopback only)."
+        ),
+    ] = None,
+    watch_stdin: Annotated[
+        bool,
+        typer.Option("--watch-stdin", help="Exit when stdin closes (used by the desktop app)."),
+    ] = False,
+) -> None:
+    """Run the local API on 127.0.0.1 (random port, per-launch token). Used by the desktop app."""
+    try:
+        run_server(root=root, dev_origins=tuple(dev_origin or ()), watch_stdin=watch_stdin)
+    except ValueError as exc:
+        typer.echo(f"error: {exc}", err=True)
+        raise typer.Exit(code=2) from exc
 
 
 if __name__ == "__main__":  # pragma: no cover

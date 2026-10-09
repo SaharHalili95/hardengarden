@@ -72,10 +72,11 @@ jobs:
           cache-dependency-glob: backend/uv.lock
       - run: uv sync
       - run: uv run pytest
-      - name: Per-package coverage gates (core and checks >= 90 %)
+      - name: Per-package coverage gates (core, checks >= 90 %; api >= 85 %)
         run: |
           uv run coverage report --include='hardengarden/core/*' --fail-under=90
           uv run coverage report --include='hardengarden/checks/*' --fail-under=90
+          uv run coverage report --include='hardengarden/api/*' --fail-under=85
       - name: shellcheck all remediation templates
         run: shellcheck -x hardengarden/remediation/templates/*.sh
       - name: Live scan of the runner (real Ubuntu 24.04, unprivileged)
