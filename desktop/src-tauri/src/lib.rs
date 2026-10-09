@@ -80,6 +80,20 @@ fn health_check(port: u16) -> bool {
     is_healthy_response(&raw)
 }
 
+/// One stderr line per lifecycle change, for packaged smoke tests and bug reports.
+/// Never includes the API token.
+pub fn status_log_line(status: &BackendStatus) -> Option<String> {
+    match status {
+        BackendStatus::Starting => None,
+        BackendStatus::Ready { port, .. } => Some(format!(
+            "hardengarden-desktop: scanner ready on 127.0.0.1:{port}"
+        )),
+        BackendStatus::Failed { reason, .. } => {
+            Some(format!("hardengarden-desktop: scanner failed: {reason}"))
+        }
+    }
+}
+
 pub struct Backend {
     status: Mutex<BackendStatus>,
     child: Mutex<Option<Child>>,
@@ -98,6 +112,9 @@ impl Backend {
     }
 
     fn set(&self, status: BackendStatus) {
+        if let Some(line) = status_log_line(&status) {
+            eprintln!("{line}");
+        }
         if let Ok(mut current) = self.status.lock() {
             *current = status;
         }
@@ -342,6 +359,30 @@ mod tests {
         ));
         assert!(!is_healthy_response("HTTP/1.1 200 OK\r\n\r\nhello"));
         assert!(!is_healthy_response(""));
+    }
+
+    #[test]
+    fn status_log_lines_never_contain_the_token() {
+        let token = "secret-token-value-that-must-not-leak-0123456789";
+        let ready = BackendStatus::Ready {
+            port: 4242,
+            token: token.into(),
+        };
+        let line = status_log_line(&ready).unwrap();
+        assert_eq!(
+            line,
+            "hardengarden-desktop: scanner ready on 127.0.0.1:4242"
+        );
+        assert!(!line.contains(token));
+        let failed = BackendStatus::Failed {
+            reason: "boom".into(),
+            log_tail: vec![],
+        };
+        assert_eq!(
+            status_log_line(&failed).unwrap(),
+            "hardengarden-desktop: scanner failed: boom"
+        );
+        assert_eq!(status_log_line(&BackendStatus::Starting), None);
     }
 
     #[test]
