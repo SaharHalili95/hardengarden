@@ -1,8 +1,10 @@
 # Threat Model
 
-Status: **Phase 0 baseline.** Revisited at the end of every phase and finalized in Phase 7.
+Status: **final for v0.1.0** (reviewed at the end of every phase; see the review log).
 Method: STRIDE per threat area. Every mitigation points to a rule in `docs/REQUIREMENTS.md` and to the
-phase whose tests will prove it. A mitigation is only "verified" once that test exists and passes.
+phase whose tests prove it. A mitigation is only "verified" once that test exists and passes.
+Items that can only be proven by the first published release (signatures, Trivy, CodeQL) are
+marked as such.
 
 ## 1. System overview
 
@@ -136,6 +138,9 @@ HardenGarden itself opens no other outbound connection. The Ollama URL setting a
 - **The user runs a remediation script without reading it.** Mitigated by the "Review before running" warning, backups and idempotent templates; ultimately a user decision.
 - **Local root attacker.** Out of scope: root can already change anything, including HardenGarden.
 - **False sense of security.** Twelve checks are not an audit. The README and UI state that this is not a compliance tool.
+- **chromadb's server-mode advisories** (four, no fix released). HardenGarden only uses the embedded client and the frozen scanner does not contain the server module; a test enforces the usage. Ignored in pip-audit and Trivy while that decision is open (ADR-012, ADR-021).
+- **Unpinned build tools** (linuxdeploy and its AppImage plugin, downloaded by the Tauri CLI during release builds), see SC-8.
+- **AI behaviour on real models is not yet measured** for every tier. The grounding, refusal and sanitizer guarantees are tested with a scripted model; quality and speed on real 1.5B–7B models are not.
 
 ## 7. Review log
 
@@ -148,3 +153,4 @@ HardenGarden itself opens no other outbound connection. The Ollama URL setting a
 | 2026-10-09 | 4 | Verified by tests: LA-1 (token on every route, enumerated), LA-2 (token only on the stdout pipe, never logged), LA-6 (Host check, CORS rejection, no cookies), API-1 (non-loopback bind impossible), API-2 (no path/command endpoints), API-3 (413 incl. chunked, 429, cancel on disconnect), API-4 (redacted JSON logs), API-5 (access log). LA-5 partial: sidecar exits when the parent closes stdin. |
 | 2026-10-09 | 5 | Verified: DS-1 (capability file test), DS-2/DS-5 (CSP, no remote URLs, no HTML sinks), PI-3 (UI renders text only), LA-5 (R35 screen shown by the real app with a broken scanner; crash watcher), DS-4 (no orphan scanner after the app is killed). New: DS-3 accepted (test hook for the Phase 6 failure test). |
 | 2026-10-09 | 6 | SC-4 implemented in `release.yml` (not yet run: needs the GitHub repository). New SC-7: compromised security tooling (the March 2026 Trivy compromise) — Trivy installed only after Sigstore signature + checksum verification, never via its action; Syft and gitleaks checksum-verified; AppImage runtime pinned by hash. New SC-8: build-time downloads (AppImage tooling by the Tauri CLI) are not pinned by us except the runtime; accepted, residual. R32/R33/R35 verified on Ubuntu 22.04 and 24.04 containers; Debian 12 runs in CI only. |
+| 2026-10-09 | 7 | Final review for v0.1.0: residual risks updated (chromadb advisories, unpinned build tools, unmeasured real-model behaviour). Two UI defects found while recording the demo were fixed and are now E2E-tested (navigation scrolled out of view; new screens opened mid-page). |
