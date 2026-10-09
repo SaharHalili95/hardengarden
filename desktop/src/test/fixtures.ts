@@ -44,7 +44,7 @@ export function scanResponse(overrides: Partial<ScanResponse["report"]> = {}): S
   return {
     id: "11111111-1111-1111-1111-111111111111",
     report: {
-      tool_version: "0.0.1",
+      tool_version: "0.1.0",
       scanned_root: "/",
       platform: {
         distro_id: "ubuntu",

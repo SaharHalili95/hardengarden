@@ -1,8 +1,11 @@
 [package]
 name = "hardengarden-desktop"
-version = "0.0.1"
+version = "0.1.0"
 description = "HardenGarden desktop app: a read-only Linux hardening auditor"
 license = "Apache-2.0"
+authors = ["SaharHalili95"]
+homepage = "https://github.com/SaharHalili95/hardengarden"
+repository = "https://github.com/SaharHalili95/hardengarden"
 edition = "2021"
 rust-version = "1.77"
 publish = false
