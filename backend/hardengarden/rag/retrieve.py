@@ -105,6 +105,17 @@ class Retriever:
         hits.sort(key=lambda h: (-h.similarity, h.id))
         return [h.id for h in hits if h.id in self.by_id]
 
+    def for_source(self, source: str, query: str) -> RetrievalResult:
+        """All passages of one known document (used to explain a specific finding)."""
+        hits = tuple(Hit(p, 1.0) for p in self.passages if p.source == source)
+        return RetrievalResult(
+            query=query,
+            hits=hits,
+            confidence=1.0 if hits else 0.0,
+            threshold=self.threshold,
+            used_vectors=False,
+        )
+
     def search(self, query: str, k: int = DEFAULT_K) -> RetrievalResult:
         terms = tokenize(query)
         lexical = [s for s in self.bm25.score(terms) if s.score > 0]

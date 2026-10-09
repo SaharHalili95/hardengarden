@@ -14,8 +14,13 @@ from hardengarden.core.engine import run_scan
 from hardengarden.core.models import ScanReport, Status
 from hardengarden.core.settings import load_settings
 from hardengarden.core.systemview import SystemView, SystemViewError
+from hardengarden.rag.assistant import Assistant, start_pull
 from hardengarden.rag.evaluate import evaluate, load_golden
+from hardengarden.rag.generate import Answer, Generation, Outcome
+from hardengarden.rag.models import CATALOG
+from hardengarden.rag.ollama import OllamaClient, OllamaError
 from hardengarden.rag.service import KnowledgeService
+from hardengarden.remediation import render
 
 app = typer.Typer(
     name="hardengarden",
@@ -214,6 +219,146 @@ def kb_eval(
         typer.echo(f"  miss: {line}")
     for line in report.false_accepts:
         typer.echo(f"  false accept: {line}")
+
+
+def _assistant() -> Assistant:
+    settings = load_settings()
+    return Assistant(settings, KnowledgeService(settings))
+
+
+def _print_answer(result: Generation | Answer) -> int:
+    """Stream a generation (or print an immediate answer). Returns the exit code."""
+    if isinstance(result, Generation):
+        streamed = False
+        try:
+            for delta in result:
+                typer.echo(delta, nl=False)
+                streamed = True
+        except KeyboardInterrupt:
+            result.cancel()
+        answer = result.answer or Answer(Outcome.CANCELLED, "Stopped.")
+        if streamed:
+            typer.echo("")
+        if answer.outcome is not Outcome.ANSWERED:
+            typer.echo(answer.text)
+    else:
+        answer = result
+        typer.echo(answer.text)
+    if answer.citations:
+        typer.echo("Sources: " + ", ".join(answer.citations))
+    if answer.cached:
+        typer.echo("(cached answer)")
+    return 0 if answer.outcome in {Outcome.ANSWERED, Outcome.NOT_ENOUGH_INFORMATION} else 1
+
+
+@app.command()
+def explain(
+    check_id: Annotated[str, typer.Argument(help="Check ID, for example HG-SSH-001.")],
+    root: Annotated[
+        Path, typer.Option("--root", help="Filesystem root to scan.", file_okay=False)
+    ] = Path("/"),
+    no_cache: Annotated[bool, typer.Option("--no-cache", help="Ignore cached answers.")] = False,
+) -> None:
+    """Explain one finding in plain language, grounded in the knowledge base."""
+    check = next((c for c in ALL_CHECKS if c.meta.id == check_id.upper()), None)
+    if check is None:
+        typer.echo(f"error: unknown check {check_id!r}; see 'hardengarden checks'", err=True)
+        raise typer.Exit(code=2)
+    try:
+        view = SystemView(root)
+    except SystemViewError as exc:
+        typer.echo(f"error: {exc}", err=True)
+        raise typer.Exit(code=2) from exc
+    report = run_scan(view, (check,))
+    result = report.results[0]
+    typer.echo(f"{check.meta.id} {check.meta.title}: {result.status.value}")
+    script = render(check.meta)
+    if script is not None and result.status.value in {"FAIL", "WARN"}:
+        typer.echo(
+            f"Remediation script: 'hardengarden remediation {check.meta.id}' "
+            "(review before running; it is a dry run unless HG_APPLY=1)."
+        )
+    raise typer.Exit(
+        code=_print_answer(_assistant().explain(check, result, use_cache=not no_cache))
+    )
+
+
+@app.command()
+def ask(question: Annotated[str, typer.Argument(help="A question about Linux hardening.")]) -> None:
+    """Ask a question; the answer is grounded in the knowledge base or refused."""
+    raise typer.Exit(code=_print_answer(_assistant().chat(question)))
+
+
+@app.command()
+def remediation(check_id: Annotated[str, typer.Argument(help="Check ID.")]) -> None:
+    """Print the vetted remediation script for a check (HardenGarden never runs it)."""
+    check = next((c for c in ALL_CHECKS if c.meta.id == check_id.upper()), None)
+    if check is None:
+        typer.echo(f"error: unknown check {check_id!r}", err=True)
+        raise typer.Exit(code=2)
+    script = render(check.meta)
+    if script is None:
+        typer.echo(
+            f"{check.meta.id} has no script: the fix depends on the service. See its guidance."
+        )
+        raise typer.Exit(code=1)
+    typer.echo(script, nl=False)
+
+
+ai_app = typer.Typer(help="Local AI model status and downloads.", no_args_is_help=True)
+app.add_typer(ai_app, name="ai")
+
+
+@ai_app.command("status")
+def ai_status() -> None:
+    """Show the hardware tier, the selected model and whether explanations are available."""
+    status = _assistant().status()
+    data = status.to_dict()
+    typer.echo(f"State: {data['state']}  Tier: {data['tier']}  Model: {data['model'] or '-'}")
+    mem = status.hardware.memory
+    if mem is not None:
+        total, free = mem.total_bytes / 1024**3, mem.available_bytes / 1024**3
+        typer.echo(f"RAM: {total:.1f} GiB total, {free:.1f} GiB free")
+    gpu = {True: "yes", None: "unknown"}.get(status.hardware.gpu, "no")
+    typer.echo(f"CPU cores: {status.hardware.cpu_cores}  GPU: {gpu}")
+    typer.echo(status.message)
+
+
+@ai_app.command("pull")
+def ai_pull(
+    model: Annotated[str, typer.Argument(help="Model name from the catalog.")],
+    yes: Annotated[
+        bool, typer.Option("--yes", help="Confirm the download without a prompt.")
+    ] = False,
+) -> None:
+    """Download a model through Ollama, only after explicit confirmation (R37)."""
+    info = CATALOG.get(model)
+    if info is None:
+        typer.echo(f"error: unknown model {model!r}; choose one of {sorted(CATALOG)}", err=True)
+        raise typer.Exit(code=2)
+    size = f"about {info.download_bytes / 1e9:.1f} GB"
+    consent = yes or typer.confirm(f"Download {info.name} ({size}) through Ollama?", default=False)
+    if not consent:
+        typer.echo("Nothing downloaded.")
+        raise typer.Exit(code=1)
+    settings = load_settings()
+    try:
+        pull = start_pull(OllamaClient(settings.ollama_url), info.name, consent=True)
+        last = ""
+        for progress in pull:
+            line = progress.status
+            if progress.total:
+                line += f" {100 * (progress.completed or 0) // progress.total}%"
+            if line != last:
+                typer.echo(line)
+                last = line
+    except OllamaError as exc:
+        typer.echo(f"error: {exc}", err=True)
+        raise typer.Exit(code=1) from exc
+    except KeyboardInterrupt:
+        pull.cancel()
+        typer.echo("Cancelled. Running the same command again resumes the download.")
+        raise typer.Exit(code=1) from None
 
 
 if __name__ == "__main__":  # pragma: no cover

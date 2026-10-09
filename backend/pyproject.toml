@@ -118,7 +118,12 @@ explicit_package_bases = true
 minversion = "8.0"
 testpaths = ["tests"]
 pythonpath = ["tests"]
+markers = [
+  "container: runs remediation templates in disposable Docker containers (needs Docker and root)",
+  "live: evaluates a real local model through Ollama (manual / workflow_dispatch only)",
+]
 addopts = [
+  "-m", "not container and not live",
   "-ra",
   "--strict-markers",
   "--strict-config",

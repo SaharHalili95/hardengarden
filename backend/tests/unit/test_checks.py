@@ -298,3 +298,32 @@ def test_aslr_missing(tmp_path: Path) -> None:
 
 def test_timed_out_command_is_not_ok() -> None:
     assert not CommandResult(returncode=None, stdout="", stderr="", timed_out=True).ok
+
+
+UID0_ACCOUNTS = "root:x:0:0::/root:/bin/bash\ntoor:x:0:0::/root:{shell}\n"
+
+
+@pytest.mark.parametrize(
+    ("shadow", "shell", "status"),
+    [
+        ("toor:!$6$s$h:19000:0:99999:7::1:\n", "/usr/sbin/nologin", Status.WARN),  # contained
+        ("toor:$6$s$h:19000:0:99999:7::1:\n", "/usr/sbin/nologin", Status.FAIL),  # not locked
+        ("toor:!$6$s$h:19000:0:99999:7:::\n", "/usr/sbin/nologin", Status.FAIL),  # not expired
+        ("toor:!$6$s$h:19000:0:99999:7::1:\n", "/bin/bash", Status.FAIL),  # still has a shell
+        ("toor:*:19000:0:99999:7::1:\n", "/bin/false", Status.WARN),
+        (None, "/usr/sbin/nologin", Status.FAIL),  # shadow unreadable: cannot prove containment
+    ],
+)
+def test_uid_zero_containment(
+    tmp_path: Path, shadow: str | None, shell: str, status: Status
+) -> None:
+    files = {"/etc/passwd": UID0_ACCOUNTS.format(shell=shell)}
+    meta: dict[str, dict[str, object]] = {}
+    if shadow is None:
+        files["/etc/shadow"] = ""
+        meta["/etc/shadow"] = {"unreadable": True}
+    else:
+        files["/etc/shadow"] = "root:!:19000:0:99999:7:::\n" + shadow
+    outcome = check_uid_zero(ctx(make_view(tmp_path, files, meta)))
+    assert outcome.status is status
+    assert not any("$6$" in e for e in outcome.evidence)

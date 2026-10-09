@@ -190,3 +190,54 @@ Format: **ADR-NNN — Title** · Date · Status · Context · Decision · Conseq
   (b) replace chromadb with a small NumPy cosine store behind the existing `VectorStore`
   interface (≈80 lines, removes ~470 MB of dependencies and all four advisories);
   (c) wait for an upstream fix. Preferred: (b), on the roadmap.
+
+## ADR-013 — Grounded generation and output safety
+
+- **Date:** 2026-10-09 · **Status:** Accepted
+- **Order of gates:** (1) retrieval answerability, refused before any model call (R13);
+  (2) R39 free-memory guard; (3) generation with temperature 0, fixed seed, bounded
+  `num_predict`, the fixed system prompt in `rag/prompts/system.txt` (R14); (4) final
+  answer must cite at least one retrieved passage id, invented ids are removed, an answer
+  with no valid citation is replaced by a fixed message (R13).
+- **Prompt structure (R15):** system-derived evidence goes only inside
+  `<untrusted_system_data>`; angle brackets in it become U+2039/U+203A and `[kb:` is
+  defused, so it can neither close its block nor forge citations. Evidence minimization
+  already drops config comments, so most injected text never reaches the model.
+- **Output (R12, R15):** the same sanitizer runs line by line on the live stream and on the
+  final answer: code fences and shell-looking lines become a fixed placeholder, inline
+  commands are removed, URLs and markdown links are removed, HTML tags are stripped.
+- **R38:** a watchdog timer enforces the hard timeout; Cancel shuts the socket down from any
+  thread, so a read blocked on a slow model returns immediately (tested over real HTTP).
+- **Explanations** use all passages of the check's own knowledge-base document instead of a
+  search, so they never depend on retrieval luck. Answers are cached per (check, KB version,
+  model, evidence hash) as 0600 files (R30a); only grounded answers are cached.
+
+## ADR-014 — Remediation template contract
+
+- **Date:** 2026-10-09 · **Status:** Accepted
+- Every template: `set -euo pipefail`; dry run unless `HG_APPLY=1`; refuses to run without
+  root; backs up edited files as `<file>.hardengarden-bak.<timestamp>`; idempotent; prints
+  each change; validates before committing (`sshd -t` + `sshd -T`, `visudo -c`) and rolls
+  back on failure; lock-out guards (no root-SSH self-lockout, no password-auth disable
+  without an authorized key, no NOPASSWD removal for a user without a password) that can be
+  overridden only with `HG_FORCE=1`. No downloads, no recursive deletes, no `eval`.
+- SSH settings go into `/etc/ssh/sshd_config.d/00-hardengarden.conf`, which is read first,
+  so its values win under OpenSSH's first-value rule; without `Include`, the main file is
+  edited in place.
+- **Deliberate deviation:** HG-ACC-001's template contains an extra UID-0 account
+  (lock, expire, nologin) but never deletes it or changes its UID, because both are
+  destructive and need a human investigation. The re-scan therefore reports WARN
+  ("contained"), not PASS. The check reads only the lock flag and expiry date from
+  `/etc/shadow`, never the hash.
+
+## ADR-015 — Hardware tiers and model catalog
+
+- **Date:** 2026-10-09 · **Status:** Accepted; model sizes still to be verified
+- Tier boundaries use MemTotal at 15.0 / 7.5 / 3.5 GiB, because a nominal 16/8/4 GB machine
+  reports slightly less than its nominal size.
+- Download sizes in `rag/models.py` (4.7 GB, 1.9 GB, 0.99 GB, 0.27 GB) have not yet been
+  verified against ollama.com. They must be checked against
+  https://ollama.com/library/qwen2.5/tags before release. During a download the exact byte
+  count reported by Ollama is shown.
+- AI states add **Model not downloaded** to the five states named in the spec; the UI needs
+  it to offer the download dialog.
