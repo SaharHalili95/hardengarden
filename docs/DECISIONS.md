@@ -169,3 +169,24 @@ Format: **ADR-NNN — Title** · Date · Status · Context · Decision · Conseq
   changed (fingerprint), and removes chunks that disappeared.
 - **Man pages (R19):** read at runtime from `/usr/share/man` through `SystemView`, gzip
   decompression capped at 2 MiB, stored only in the user's data directory (0600).
+
+## ADR-012 — Open chromadb advisories: accepted as unreachable
+
+- **Date:** 2026-10-09 · **Status:** Accepted, to be revisited
+- **Context:** pip-audit reports four advisories against chromadb 1.5.9 (the latest release),
+  none with a fixed version: GHSA-f4j7-r4q5-qw2c / CVE-2026-45829 and GHSA-36p7-vc44-83pf /
+  CVE-2026-45833 (code injection via `trust_remote_code` model loading through the server's
+  `/api/v2/.../collections` endpoints), GHSA-xph7-9rjv-w5fr / CVE-2026-45831 and
+  GHSA-2wm9-hf6c-p5cr / CVE-2026-45830 (cross-tenant authorization in the server's RBAC).
+- **Analysis:** all four are in chromadb's HTTP server. HardenGarden imports chromadb only in
+  `rag/store.py`, uses only the embedded `PersistentClient`, never starts the chromadb
+  server, never uses its embedding functions (`embedding_function=None`) and never passes
+  `trust_remote_code`. The local store is in a 0700 directory owned by the user.
+- **Decision:** keep chromadb (section 2 forbids substituting it), ignore exactly these four
+  IDs in pip-audit (and in Trivy in Phase 6), and enforce the embedded-only usage with
+  `tests/security/test_chroma_usage.py`. Any other advisory still fails the build.
+- **Conflict to resolve:** this collides with the Phase 6 gate "zero HIGH/CRITICAL findings"
+  read literally. Options: (a) accept these documented exceptions;
+  (b) replace chromadb with a small NumPy cosine store behind the existing `VectorStore`
+  interface (≈80 lines, removes ~470 MB of dependencies and all four advisories);
+  (c) wait for an upstream fix. Preferred: (b), on the roadmap.

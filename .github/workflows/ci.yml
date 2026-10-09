@@ -98,9 +98,14 @@ jobs:
       - name: bandit
         run: uv run bandit -c pyproject.toml -r hardengarden
       - name: pip-audit (all locked dependencies, hash-verified)
+        # Four chromadb advisories have no fix and affect only chromadb's HTTP server, which
+        # HardenGarden never runs (embedded PersistentClient only). Justified in ADR-012 and
+        # enforced by tests/security/test_chroma_usage.py. Every other advisory fails the build.
         run: |
           uv export --all-groups --no-emit-project -o "$RUNNER_TEMP/requirements.txt"
-          uv run pip-audit -r "$RUNNER_TEMP/requirements.txt" --disable-pip --require-hashes --strict
+          uv run pip-audit -r "$RUNNER_TEMP/requirements.txt" --disable-pip --require-hashes --strict \
+            --ignore-vuln GHSA-f4j7-r4q5-qw2c --ignore-vuln GHSA-36p7-vc44-83pf \
+            --ignore-vuln GHSA-xph7-9rjv-w5fr --ignore-vuln GHSA-2wm9-hf6c-p5cr
 
   gitleaks:
     name: Secret scan (gitleaks)
