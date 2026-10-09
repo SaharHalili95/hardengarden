@@ -122,3 +122,50 @@ Format: **ADR-NNN — Title** · Date · Status · Context · Decision · Conseq
   MEDIUM for NET-001, FS-003, ACC-002, UPD-001, KRN-001.
 - **Expected listeners** for HG-NET-001: tcp/22 (SSH), udp/68 and udp/546 (DHCP clients).
   Anything else on a non-loopback address is a WARN.
+
+## ADR-009 — Runtime dependency: chromadb
+
+- **Date:** 2026-10-09 · **Status:** Accepted (named in docs/REQUIREMENTS.md section 2), with concerns
+- **Why:** Local persistent vector store for knowledge-base and man-page embeddings.
+- **Alternatives:** sqlite-vec, hnswlib, plain NumPy cosine search (all far lighter for ~60
+  chunks). Not used because section 2 fixes ChromaDB.
+- **License / maintenance:** Apache-2.0; actively maintained (1.x, Rust core).
+- **Concerns, recorded honestly:** chromadb 1.5.9 pulls in ~470 MB of transitive packages
+  (onnxruntime, grpcio, kubernetes client, opentelemetry SDK and exporter, tokenizers). This
+  inflates the PyInstaller sidecar (Phase 6) and the supply-chain surface (SC-1).
+- **Telemetry (R7):** In 1.5.9 its product telemetry class is a no-op and the OTel endpoint is
+  empty by default. HardenGarden still sets `anonymized_telemetry=False`. A test records every
+  `socket.connect` during ingest and query and asserts there are none, and ingest/search were
+  verified inside a network namespace with networking fully disabled.
+- **Possible follow-up:** if the sidecar size matters, ADR-011's lexical retriever plus a
+  NumPy cosine search over the stored embeddings would remove chromadb entirely.
+
+## ADR-010 — Runtime dependency: PyYAML (+ dev: types-PyYAML)
+
+- **Date:** 2026-10-09 · **Status:** Accepted
+- **Why:** The golden evaluation sets are YAML (the spec names `golden.yaml`), and
+  `hardengarden kb eval` reads them. Only `yaml.safe_load` is used (R5 test enforces this).
+- **Alternatives:** JSON golden files (would deviate from the spec's file name).
+- **License / maintenance:** MIT; maintained. Already present transitively via chromadb, so it
+  adds no new code to the install; declaring it explicitly avoids relying on a transitive pin.
+
+## ADR-011 — Retrieval design: hybrid ranking, deterministic answerability
+
+- **Date:** 2026-10-09 · **Status:** Accepted
+- **Ranking:** BM25 over all chunks (stdlib only), fused with vector similarity by reciprocal
+  rank fusion when `nomic-embed-text` embeddings exist. Without Ollama, ranking is BM25 only.
+- **Answerability (R13):** the IDF-weighted share of the question's terms found in either of
+  the two best-ranked sources. Terms unknown to the whole knowledge base weigh the most, so
+  off-topic questions score low. Below the threshold (default **0.30**, configurable) the
+  answer is the fixed refusal. The signal is deterministic and identical with and without
+  Ollama, so the refusal path is fully tested in CI.
+- **How the threshold was chosen:** on `golden.yaml`, answerable questions scored ≥ 0.33 and
+  negatives ≤ 0.25 with top-2 coverage; 0.30 sits in the gap. Because that is tuning on the
+  evaluation set, a separate `holdout.yaml` was written **after** fixing the threshold and is
+  reported as-is (Recall@5 0.92, rejection 1.00). The margin is small; more paraphrased
+  questions from real users would be the best next improvement.
+- **Chunking:** one chunk per `##` section; IDs are `<doc>#<section-slug>`, independent of
+  content and position. Ingestion re-embeds only chunks whose content or embedding model
+  changed (fingerprint), and removes chunks that disappeared.
+- **Man pages (R19):** read at runtime from `/usr/share/man` through `SystemView`, gzip
+  decompression capped at 2 MiB, stored only in the user's data directory (0600).
