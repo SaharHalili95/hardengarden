@@ -5,11 +5,13 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
 from typer.testing import CliRunner
 
 from hardengarden import __version__
 from hardengarden.checks import ALL_CHECKS
 from hardengarden.cli import app, render_checks_markdown
+from hardengarden.core.settings import Settings, save_settings
 from hgtest import FIXTURES
 
 runner = CliRunner()
@@ -73,3 +75,21 @@ def test_checks_markdown_matches_committed_docs() -> None:
 def test_no_args_shows_help() -> None:
     result = runner.invoke(app, [])
     assert "scan" in result.stdout
+
+
+def test_kb_commands_work_without_ollama(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path))
+    save_settings(Settings(ollama_url="http://127.0.0.1:9"), tmp_path / "hardengarden")
+    ingest = runner.invoke(app, ["kb", "ingest"])
+    assert ingest.exit_code == 0
+    assert "Keyword search still works" in ingest.stdout
+    found = runner.invoke(app, ["kb", "search", "What permissions should /etc/shadow have?"])
+    assert found.exit_code == 0
+    assert found.stdout.startswith("answerable")
+    assert "shadow-permissions#" in found.stdout
+    refused = runner.invoke(app, ["kb", "search", "How do I bake sourdough bread?"])
+    assert refused.stdout.startswith("not enough information")
+    golden = Path(__file__).resolve().parents[1] / "rag_eval" / "golden.yaml"
+    evaluated = runner.invoke(app, ["kb", "eval", str(golden), "--no-vectors"])
+    assert evaluated.exit_code == 0
+    assert "Recall@5: 1.0000" in evaluated.stdout

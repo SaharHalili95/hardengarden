@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
+import math
 from dataclasses import dataclass, field
 from pathlib import Path, PurePosixPath
 from typing import Any
@@ -11,6 +13,7 @@ from hardengarden.core.check import CheckContext
 from hardengarden.core.models import Platform
 from hardengarden.core.runner import Command, CommandResult
 from hardengarden.core.systemview import AccessDeniedError, FileInfo, FileKind, SystemView
+from hardengarden.rag.lexical import tokenize
 
 FIXTURES = Path(__file__).parent / "fixtures" / "systems"
 SCENARIOS = ("hardened", "default_ubuntu_2404", "misconfigured", "edge_cases")
@@ -111,3 +114,32 @@ def ctx(
     view: SystemView, runner: FakeRunner | None = None, *, is_root: bool = True
 ) -> CheckContext:
     return CheckContext(view=view, runner=runner or FakeRunner(), is_root=is_root)
+
+
+class HashEmbedder:
+    """Deterministic stand-in for an embedding model (tests only): hashed bag of words."""
+
+    DIM = 256
+
+    def __init__(self, name: str = "test-embed") -> None:
+        self._name = name
+        self.calls = 0
+
+    @property
+    def name(self) -> str:
+        return self._name
+
+    def _vector(self, text: str) -> list[float]:
+        vec = [0.0] * self.DIM
+        for token in tokenize(text):
+            vec[int(hashlib.sha256(token.encode()).hexdigest(), 16) % self.DIM] += 1.0
+        norm = math.sqrt(sum(v * v for v in vec)) or 1.0
+        return [v / norm for v in vec]
+
+    def embed_documents(self, texts: list[str]) -> list[list[float]]:
+        self.calls += 1
+        return [self._vector(t) for t in texts]
+
+    def embed_query(self, text: str) -> list[float]:
+        self.calls += 1
+        return self._vector(text)
