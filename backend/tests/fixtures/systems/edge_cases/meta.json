@@ -1,0 +1,9 @@
+{
+  "/etc/sudoers": {
+    "mode": "0440"
+  },
+  "/etc/sudoers.d/50-locked": {
+    "mode": "0440",
+    "unreadable": true
+  }
+}

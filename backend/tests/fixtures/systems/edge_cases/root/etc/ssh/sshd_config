@@ -1,0 +1,11 @@
+# include loop, malformed lines, case-insensitivity, '=' syntax and Match overrides
+Include loop.conf
+PERMITROOTLOGIN=no
+passwordauthentication no
+PermitEmptyPasswords
+PermitEmptyPasswords no
+PasswordAuthentication yes
+Match User backup Address 10.0.0.0/8
+	PasswordAuthentication yes
+Match all
+	PermitRootLogin no

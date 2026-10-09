@@ -130,3 +130,4 @@ HardenGarden itself opens no other outbound connection. The Ollama URL setting a
 | Date | Phase | Change |
 |---|---|---|
 | 2026-10-09 | 0 | Baseline created. Phase 0 mitigations: SC-1, SC-2, SC-3, SC-6. |
+| 2026-10-09 | 1 | Verified by tests: LA-3 (confinement suite), PI-1 (score has no LLM input), PI-5 (AST R5 test), PM-1 (root-only checks SKIPPED + hint), PM-2 (audit-hook write test, fixtures and live host), PM-3 (runner allowlist tests). New: subprocess opens `/dev/null` read-write for stdin; accepted, harmless. |

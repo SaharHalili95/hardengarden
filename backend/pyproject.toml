@@ -18,7 +18,13 @@ classifiers = [
 ]
 # Runtime dependencies are added only in the phase that needs them,
 # each with a justification in docs/DECISIONS.md (docs/REQUIREMENTS.md section 2, R29).
-dependencies = []
+dependencies = [
+    "pydantic>=2.11,<3",
+    "typer>=0.16,<1",
+]
+
+[project.scripts]
+hardengarden = "hardengarden.cli:app"
 
 [project.urls]
 Repository = "https://github.com/SaharHalili95/hardengarden"
@@ -50,7 +56,7 @@ exclude = ["**/.gitkeep"]
 [tool.ruff]
 target-version = "py312"
 line-length = 100
-src = ["hardengarden", "tests"]
+src = [".", "tests"]
 
 [tool.ruff.lint]
 select = [
@@ -76,8 +82,12 @@ select = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
-# assert is the pytest idiom; S101 only matters in shipped code.
-"tests/**" = ["S101"]
+# Test-only relaxations (never applied to shipped code under hardengarden/):
+#   S101 assert is the pytest idiom; PLR2004 literal expected values are the point of a test;
+#   ANN401 monkeypatched fakes mirror Any-typed stdlib signatures; TRY003 inline messages in
+#   fakes; S104 "0.0.0.0" appears as test data, never as a bind address; PLR0912 the R5
+#   static scanner is one deliberate rule table.
+"tests/**" = ["S101", "PLR2004", "ANN401", "TRY003", "S104", "PLR0912"]
 
 [tool.ruff.format]
 quote-style = "double"
@@ -90,11 +100,14 @@ warn_unreachable = true
 warn_unused_configs = true
 enable_error_code = ["ignore-without-code", "redundant-expr", "truthy-bool"]
 files = ["hardengarden", "tests"]
+mypy_path = "tests"
+explicit_package_bases = true
 
 # ---------------------------------------------------------------- pytest
 [tool.pytest.ini_options]
 minversion = "8.0"
 testpaths = ["tests"]
+pythonpath = ["tests"]
 addopts = [
   "-ra",
   "--strict-markers",

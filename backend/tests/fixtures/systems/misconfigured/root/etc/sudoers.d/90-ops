@@ -1,0 +1,2 @@
+# ops team
+alice ALL=(ALL) NOPASSWD: ALL
