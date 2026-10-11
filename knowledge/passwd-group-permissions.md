@@ -24,5 +24,5 @@ Set owner `root:root` and mode `0644` on both files. Then review both files for 
 The HardenGarden remediation template for HG-FS-002 records the old values, then sets owner and mode.
 
 ## References
-- https://man7.org/linux/man-pages/man5/passwd.5.html
-- https://man7.org/linux/man-pages/man1/chmod.1.html
+- https://manpages.debian.org/bookworm/passwd/passwd.5.en.html
+- https://manpages.debian.org/bookworm/coreutils/chmod.1.en.html

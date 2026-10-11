@@ -24,5 +24,5 @@ For each listed path, remove the others-write bit (`chmod o-w`), then check who 
 The HardenGarden remediation template for HG-FS-003 lists every world-writable entry under `/etc` and removes only the others-write bit.
 
 ## References
-- https://man7.org/linux/man-pages/man1/chmod.1.html
-- https://man7.org/linux/man-pages/man1/find.1.html
+- https://manpages.debian.org/bookworm/coreutils/chmod.1.en.html
+- https://manpages.debian.org/bookworm/findutils/find.1.en.html

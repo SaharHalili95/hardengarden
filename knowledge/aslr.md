@@ -28,4 +28,4 @@ The HardenGarden remediation template for HG-KRN-001 sets the running value and 
 
 ## References
 - https://www.kernel.org/doc/html/latest/admin-guide/sysctl/kernel.html
-- https://man7.org/linux/man-pages/man5/sysctl.d.5.html
+- https://manpages.debian.org/bookworm/systemd/sysctl.d.5.en.html

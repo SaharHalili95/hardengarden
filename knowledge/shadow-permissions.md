@@ -25,5 +25,5 @@ Restore the owner to `root:shadow` and the mode to `0640`. Then find out how the
 The HardenGarden remediation template for HG-FS-001 records the old values, then sets owner and mode.
 
 ## References
-- https://man7.org/linux/man-pages/man5/shadow.5.html
-- https://man7.org/linux/man-pages/man1/chmod.1.html
+- https://manpages.debian.org/bookworm/passwd/shadow.5.en.html
+- https://manpages.debian.org/bookworm/coreutils/chmod.1.en.html

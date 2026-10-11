@@ -25,4 +25,4 @@ The HardenGarden remediation template for HG-SSH-003 applies the setting in a ba
 
 ## References
 - https://man.openbsd.org/sshd_config
-- https://man7.org/linux/man-pages/man5/shadow.5.html
+- https://manpages.debian.org/bookworm/passwd/shadow.5.en.html

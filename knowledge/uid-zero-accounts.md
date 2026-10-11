@@ -27,5 +27,5 @@ Treat an unexpected UID 0 account as a possible sign of compromise:
 The HardenGarden remediation template for HG-ACC-001 lists the accounts and, only when you explicitly ask, locks them. It never deletes accounts or changes UIDs.
 
 ## References
-- https://man7.org/linux/man-pages/man5/passwd.5.html
-- https://man7.org/linux/man-pages/man8/usermod.8.html
+- https://manpages.debian.org/bookworm/passwd/passwd.5.en.html
+- https://manpages.debian.org/bookworm/passwd/usermod.8.en.html

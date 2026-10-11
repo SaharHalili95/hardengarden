@@ -29,5 +29,5 @@ For each unexpected listener, pick one:
 There is no single safe automatic fix, so HardenGarden offers guidance only for this check.
 
 ## References
-- https://man7.org/linux/man-pages/man8/ss.8.html
-- https://man7.org/linux/man-pages/man5/proc_net.5.html
+- https://manpages.debian.org/bookworm/iproute2/ss.8.en.html
+- https://manpages.debian.org/bookworm/manpages/proc.5.en.html
