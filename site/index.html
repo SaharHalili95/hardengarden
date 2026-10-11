@@ -1,0 +1,304 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'"
+    />
+    <title>HardenGarden</title>
+    <meta
+      name="description"
+      content="A read-only Linux hardening auditor. It scans your machine, scores it, explains each finding with a local AI model and shows a reviewed fix you run yourself."
+    />
+    <meta property="og:title" content="HardenGarden" />
+    <meta
+      property="og:description"
+      content="Your Linux system is a garden. HardenGarden finds the weeds."
+    />
+    <meta property="og:image" content="media/garden.png" />
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="preload" href="fonts/recursive.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="stylesheet" href="style.css" />
+    <script src="main.js" defer></script>
+  </head>
+  <body>
+    <a class="skip" href="#survey">Skip to content</a>
+
+    <header class="top">
+      <a class="brand" href="#">
+        <img src="favicon.svg" alt="" width="28" height="28" />
+        HardenGarden
+      </a>
+      <nav aria-label="Sections">
+        <a href="#how">How it works</a>
+        <a href="#checks">Checks</a>
+        <a href="#safety">Safety</a>
+        <a href="#install">Install</a>
+        <a class="gh" href="https://github.com/SaharHalili95/hardengarden">GitHub</a>
+      </nav>
+    </header>
+
+    <main>
+      <section class="hero" aria-labelledby="hero-title">
+        <div class="hero-text">
+          <h1 id="hero-title">Your Linux system is a garden. HardenGarden finds the weeds.</h1>
+          <p class="lede">
+            A read-only security auditor for Ubuntu and Debian. It checks SSH, the firewall,
+            permissions, sudo, accounts, updates and kernel settings, scores the machine, explains
+            every finding with a local AI model, and hands you a reviewed fix you run yourself.
+          </p>
+          <div class="actions">
+            <a class="button" href="https://github.com/SaharHalili95/hardengarden/releases"
+              >Download v0.1.0</a
+            >
+            <a class="button quiet" href="https://github.com/SaharHalili95/hardengarden"
+              >Read the source</a
+            >
+          </div>
+          <p class="fineprint">
+            Free and open source (Apache-2.0). No account, no cloud, no telemetry.
+          </p>
+        </div>
+
+        <figure class="survey" id="survey" aria-labelledby="survey-caption">
+          <div class="survey-head">
+            <div>
+              <p class="survey-host">Ubuntu 24.04 LTS</p>
+              <p class="survey-meta">12 of 12 checks evaluated</p>
+            </div>
+            <p class="score" aria-label="Garden Health 72 out of 100">
+              <span class="score-num">72</span><span class="score-of">/100</span>
+            </p>
+          </div>
+          <ul class="bed" aria-label="Garden bed: one plant per check">
+            <li data-status="WARN" data-title="SSH root login disabled">SSH-001</li>
+            <li data-status="FAIL" data-title="SSH password authentication disabled">SSH-002</li>
+            <li data-status="PASS" data-title="SSH empty passwords disallowed">SSH-003</li>
+            <li data-status="FAIL" data-title="Host firewall active">FW-001</li>
+            <li data-status="WARN" data-title="Listening services on non-loopback interfaces">NET-001</li>
+            <li data-status="PASS" data-title="/etc/shadow permissions and owner">FS-001</li>
+            <li data-status="PASS" data-title="/etc/passwd and /etc/group permissions">FS-002</li>
+            <li data-status="PASS" data-title="World-writable files under /etc">FS-003</li>
+            <li data-status="PASS" data-title="Accounts with UID 0 other than root">ACC-001</li>
+            <li data-status="FAIL" data-title="NOPASSWD entries in sudoers">ACC-002</li>
+            <li data-status="PASS" data-title="Automatic security updates enabled">UPD-001</li>
+            <li data-status="PASS" data-title="ASLR enabled">KRN-001</li>
+          </ul>
+          <p class="bed-detail" aria-live="polite">
+            Point at a plant to see its check.
+          </p>
+          <figcaption id="survey-caption">
+            A real scan of a test machine: three weeds, two plants that need care.
+          </figcaption>
+        </figure>
+      </section>
+
+      <section class="how" id="how" aria-labelledby="how-title">
+        <h2 id="how-title">How it works</h2>
+        <ol class="steps">
+          <li>
+            <h3>Survey</h3>
+            <p>
+              Twelve checks read configuration files and three fixed commands
+              (<code>sshd -T</code>, <code>ufw status</code>, <code>nft list ruleset</code>).
+              Nothing is written, restarted or installed. The Garden Health score comes from a
+              fixed formula, never from the AI.
+            </p>
+          </li>
+          <li>
+            <h3>Explain</h3>
+            <p>
+              A local model, run by Ollama on your own machine, explains each weed in plain
+              language. Answers come from an original knowledge base and cite the passage they
+              use. When the knowledge base does not cover a question, it says so instead of
+              guessing.
+            </p>
+          </li>
+          <li>
+            <h3>Fix it yourself</h3>
+            <p>
+              Every finding has a reviewed shell script. It changes nothing unless you run it as
+              root with <code>HG_APPLY=1</code>, backs up each file it edits, and checks SSH
+              configuration with <code>sshd -t</code> before reloading.
+            </p>
+          </li>
+        </ol>
+      </section>
+
+      <section class="demo" aria-labelledby="demo-title">
+        <div class="demo-text">
+          <h2 id="demo-title">The desktop app</h2>
+          <p>
+            A garden view of the whole machine, the list of weeds, and a detail page for each one
+            with its evidence, the explanation and the script. The same scanner also runs as a
+            command-line tool.
+          </p>
+          <p class="fineprint">
+            Recorded on the build machine, where Ollama was not installed, so the explanation
+            shows how the app behaves without AI: scanning, scores and scripts still work.
+          </p>
+        </div>
+        <div class="window">
+          <img
+            src="media/demo.gif"
+            width="900"
+            height="625"
+            loading="lazy"
+            alt="HardenGarden scanning a machine, opening the weed list, opening one weed and copying its remediation script"
+          />
+        </div>
+      </section>
+
+      <section class="checks" id="checks" aria-labelledby="checks-title">
+        <h2 id="checks-title">What it checks</h2>
+        <p class="section-lede">
+          Twelve focused checks with stable IDs. Checks that need root are reported as not
+          checked when you scan without it, and the coverage figure says so.
+        </p>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th scope="col">Check</th>
+                <th scope="col">What it looks at</th>
+                <th scope="col">Severity</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td><code>HG-SSH-001</code></td><td>SSH root login disabled</td><td>High</td></tr>
+              <tr><td><code>HG-SSH-002</code></td><td>SSH password authentication disabled</td><td>High</td></tr>
+              <tr><td><code>HG-SSH-003</code></td><td>SSH empty passwords disallowed</td><td>Critical</td></tr>
+              <tr><td><code>HG-FW-001</code></td><td>Host firewall active (ufw or nftables)</td><td>High</td></tr>
+              <tr><td><code>HG-NET-001</code></td><td>Services listening on non-loopback interfaces</td><td>Medium</td></tr>
+              <tr><td><code>HG-FS-001</code></td><td><code>/etc/shadow</code> permissions and owner</td><td>Critical</td></tr>
+              <tr><td><code>HG-FS-002</code></td><td><code>/etc/passwd</code> and <code>/etc/group</code> permissions</td><td>High</td></tr>
+              <tr><td><code>HG-FS-003</code></td><td>World-writable files under <code>/etc</code></td><td>Medium</td></tr>
+              <tr><td><code>HG-ACC-001</code></td><td>Accounts with UID 0 other than root</td><td>Critical</td></tr>
+              <tr><td><code>HG-ACC-002</code></td><td><code>NOPASSWD</code> rules in sudoers</td><td>Medium</td></tr>
+              <tr><td><code>HG-UPD-001</code></td><td>Automatic security updates enabled</td><td>Medium</td></tr>
+              <tr><td><code>HG-KRN-001</code></td><td>ASLR enabled</td><td>Medium</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="safety" id="safety" aria-labelledby="safety-title">
+        <h2 id="safety-title">What it will never do</h2>
+        <ul class="nevers">
+          <li>
+            <strong>Change your system.</strong> Checks only read. Fixes are text you review,
+            copy and run.
+          </li>
+          <li>
+            <strong>Ask for your password.</strong> No sudo prompts, no privilege escalation. Run
+            the scanner with sudo yourself if you want full coverage.
+          </li>
+          <li>
+            <strong>Send anything anywhere.</strong> The only network traffic goes to Ollama on
+            your own machine. The local API listens on 127.0.0.1 with a per-launch token.
+          </li>
+          <li>
+            <strong>Let the AI decide.</strong> Findings and scores are deterministic. Text from
+            your system reaches the model as data, and its answers are shown as plain text with
+            commands and links removed.
+          </li>
+        </ul>
+        <p class="section-lede">
+          Releases are signed with Sigstore and ship with checksums and an SPDX SBOM. CodeQL,
+          Trivy, bandit and pip-audit run in CI. The full analysis is in the
+          <a href="https://github.com/SaharHalili95/hardengarden/blob/main/docs/THREAT_MODEL.md"
+            >threat model</a
+          >.
+        </p>
+      </section>
+
+      <section class="install" id="install" aria-labelledby="install-title">
+        <h2 id="install-title">Install</h2>
+        <p class="section-lede">
+          Ubuntu 22.04 or newer, or Debian 12, on x86_64. Download the files from the
+          <a href="https://github.com/SaharHalili95/hardengarden/releases">releases page</a>.
+        </p>
+        <div class="install-grid">
+          <article>
+            <h3>Desktop app (.deb)</h3>
+            <p>Installs the app and the <code>hardengarden</code> command.</p>
+            <div class="code">
+              <pre><code>sudo apt install ./hardengarden_0.1.0_amd64.deb
+hardengarden-desktop</code></pre>
+              <button class="copy" type="button">Copy</button>
+            </div>
+          </article>
+          <article>
+            <h3>AppImage</h3>
+            <p>Nothing to install. Make it executable and run it.</p>
+            <div class="code">
+              <pre><code>chmod +x hardengarden_0.1.0_x86_64.AppImage
+./hardengarden_0.1.0_x86_64.AppImage</code></pre>
+              <button class="copy" type="button">Copy</button>
+            </div>
+          </article>
+          <article>
+            <h3>Command line only</h3>
+            <p>With <a href="https://docs.astral.sh/uv/">uv</a>, which brings Python 3.12.</p>
+            <div class="code">
+              <pre><code>uv tool install ./hardengarden-0.1.0-py3-none-any.whl
+hardengarden scan</code></pre>
+              <button class="copy" type="button">Copy</button>
+            </div>
+          </article>
+        </div>
+        <p class="fineprint">
+          For AI explanations, install <a href="https://ollama.com/download">Ollama</a>. The app
+          picks a model that fits your RAM and downloads it only when you click Download.
+        </p>
+      </section>
+
+      <section class="stack" aria-labelledby="stack-title">
+        <h2 id="stack-title">Under the hood</h2>
+        <dl>
+          <div><dt>Scanner and API</dt><dd>Python 3.12, FastAPI, Pydantic, Typer</dd></div>
+          <div><dt>Explanations</dt><dd>Ollama, ChromaDB, BM25 and vector retrieval with citations</dd></div>
+          <div><dt>Desktop</dt><dd>Tauri 2 (Rust), React 18, TypeScript</dd></div>
+          <div><dt>Packaging</dt><dd>PyInstaller onedir, .deb, AppImage, built on Ubuntu 22.04</dd></div>
+          <div><dt>Quality</dt><dd>pytest, Vitest, Playwright, axe, ruff, mypy strict, clippy</dd></div>
+        </dl>
+        <p class="section-lede">
+          Read the
+          <a href="https://github.com/SaharHalili95/hardengarden/blob/main/docs/ARCHITECTURE.md"
+            >architecture</a
+          >
+          and the
+          <a href="https://github.com/SaharHalili95/hardengarden/blob/main/docs/DECISIONS.md"
+            >decision log</a
+          >.
+        </p>
+      </section>
+
+      <section class="honest" aria-labelledby="honest-title">
+        <h2 id="honest-title">Good to know</h2>
+        <p>
+          HardenGarden is an educational and portfolio security tool. It is not a certified
+          compliance scanner and does not replace a professional audit. Twelve checks cover the
+          most common weeds, not every one. AI answers can be wrong, so read the passage they
+          cite.
+        </p>
+      </section>
+    </main>
+
+    <footer class="foot">
+      <p>
+        HardenGarden is open source under the Apache-2.0 license. The page loads nothing from
+        other sites.
+      </p>
+      <p>
+        <a href="https://github.com/SaharHalili95/hardengarden">Source</a>
+        <a href="https://github.com/SaharHalili95/hardengarden/releases">Releases</a>
+        <a href="https://github.com/SaharHalili95/hardengarden/security/advisories/new"
+          >Report a vulnerability</a
+        >
+      </p>
+    </footer>
+  </body>
+</html>

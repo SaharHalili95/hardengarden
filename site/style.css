@@ -1,0 +1,663 @@
+/* HardenGarden landing page. Same garden-survey palette and typeface as the desktop app. */
+
+@font-face {
+  font-family: "Recursive";
+  src: url("fonts/recursive.woff2") format("woff2");
+  font-weight: 300 1000;
+  font-display: swap;
+}
+
+:root {
+  color-scheme: light;
+  --lichen: #e9eee6;
+  --leaf-paper: #f7f9f4;
+  --moss: #1f2b22;
+  --moss-soft: #4a594e;
+  --furrow: #c9d3c6;
+  --thistle: #8b2f6f;
+  --thistle-wash: #f4e4ef;
+  --pollen: #6f5300;
+  --pollen-wash: #f6edcf;
+  --fern: #2b6537;
+  --fern-wash: #e0eedf;
+  --soil: #7a6a55;
+  --focus: #1d5fa8;
+  --casual: "CASL" 1, "MONO" 0;
+  --linear: "CASL" 0, "MONO" 0;
+  --mono: "CASL" 0, "MONO" 1;
+  --measure: 66ch;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --lichen: #141c16;
+    --leaf-paper: #1d281f;
+    --moss: #e4ebe2;
+    --moss-soft: #a8b7ab;
+    --furrow: #33433a;
+    --thistle: #eaa0d8;
+    --thistle-wash: #3a2333;
+    --pollen: #e8c862;
+    --pollen-wash: #3a3218;
+    --fern: #91d39a;
+    --fern-wash: #1f3523;
+    --soil: #8f7d62;
+    --focus: #8cc2ff;
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  background: var(--lichen);
+  color: var(--moss);
+  font-family: "Recursive", system-ui, sans-serif;
+  font-variation-settings: var(--linear);
+  font-size: 1.0625rem;
+  line-height: 1.6;
+}
+
+a {
+  color: inherit;
+  text-decoration-color: var(--fern);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+}
+
+a:hover {
+  color: var(--fern);
+}
+
+:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+code,
+pre {
+  font-family: "Recursive", ui-monospace, monospace;
+  font-variation-settings: var(--mono);
+  font-size: 0.9em;
+}
+
+h1,
+h2,
+h3 {
+  font-variation-settings: var(--casual);
+  line-height: 1.15;
+  margin: 0 0 0.75rem;
+}
+
+h1 {
+  font-size: clamp(2.1rem, 3.5vw, 3rem);
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+h2 {
+  font-size: clamp(1.6rem, 3vw, 2.2rem);
+  font-weight: 760;
+}
+
+h3 {
+  font-size: 1.2rem;
+  font-weight: 720;
+}
+
+p {
+  margin: 0 0 1rem;
+  max-width: var(--measure);
+}
+
+.skip {
+  position: absolute;
+  left: -999px;
+}
+
+.skip:focus {
+  left: 1rem;
+  top: 1rem;
+  background: var(--leaf-paper);
+  padding: 0.5rem 0.75rem;
+  z-index: 10;
+}
+
+/* ---------------------------------------------------------------- header */
+
+.top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: 1.25rem 1.5rem;
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-variation-settings: var(--casual);
+  font-weight: 780;
+  font-size: 1.25rem;
+  text-decoration: none;
+}
+
+.top nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1.25rem;
+  font-size: 0.95rem;
+}
+
+.top nav a {
+  text-decoration: none;
+  color: var(--moss-soft);
+}
+
+.top nav a:hover {
+  color: var(--moss);
+}
+
+.top nav .gh {
+  color: var(--moss);
+  font-weight: 650;
+}
+
+/* ---------------------------------------------------------------- layout */
+
+main > section {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: 4.5rem 1.5rem;
+}
+
+main > section + section {
+  border-top: 1px solid var(--furrow);
+}
+
+.section-lede {
+  color: var(--moss-soft);
+}
+
+.fineprint {
+  font-size: 0.9rem;
+  color: var(--moss-soft);
+}
+
+/* ---------------------------------------------------------------- hero */
+
+.hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
+  gap: 3.5rem;
+  align-items: center;
+  padding-top: 2.5rem;
+}
+
+.lede {
+  font-size: 1.15rem;
+  color: var(--moss-soft);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin: 1.75rem 0 1rem;
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.9rem;
+  padding: 0 1.3rem;
+  border-radius: 6px;
+  background: var(--moss);
+  color: var(--leaf-paper);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.button:hover {
+  background: var(--fern);
+  color: var(--leaf-paper);
+}
+
+.button.quiet {
+  background: transparent;
+  color: var(--moss);
+  border: 1.5px solid var(--moss);
+}
+
+.button.quiet:hover {
+  border-color: var(--fern);
+  color: var(--fern);
+}
+
+/* The one bold element: the surveyed garden bed. */
+.survey {
+  margin: 0;
+  background: var(--leaf-paper);
+  border: 1px solid var(--furrow);
+  border-radius: 14px;
+  padding: 1.5rem 1.5rem 1.25rem;
+}
+
+.survey-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.survey-host {
+  font-variation-settings: var(--casual);
+  font-weight: 760;
+  font-size: 1.3rem;
+  margin: 0;
+}
+
+.survey-meta {
+  margin: 0;
+  color: var(--moss-soft);
+  font-size: 0.92rem;
+}
+
+.score {
+  margin: 0;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.score-num {
+  font-variation-settings: var(--casual);
+  font-weight: 900;
+  font-size: 3.6rem;
+}
+
+.score-of {
+  color: var(--moss-soft);
+  font-size: 1.1rem;
+  margin-left: 0.2rem;
+}
+
+.bed {
+  list-style: none;
+  margin: 0;
+  padding: 0.75rem 0.25rem 0;
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 0.35rem 0.25rem;
+  border-bottom: 12px solid var(--soil);
+  border-radius: 0 0 4px 4px;
+}
+
+.bed li {
+  display: flex;
+  justify-content: center;
+  font-variation-settings: var(--mono);
+  font-size: 0.72rem;
+  color: var(--moss-soft);
+}
+
+.plant {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+  width: 100%;
+  padding: 0.4rem 0 0.35rem;
+  background: none;
+  border: 0;
+  border-radius: 8px;
+  color: var(--moss-soft);
+  font: inherit;
+  cursor: pointer;
+}
+
+.plant:hover,
+.plant:focus-visible {
+  background: var(--lichen);
+}
+
+.plant svg {
+  width: clamp(2.6rem, 5.2vw, 4.25rem);
+  height: auto;
+  transform-origin: 50% 100%;
+}
+
+.bed-detail {
+  min-height: 1.6em;
+  margin: 0.9rem 0 0.25rem;
+  font-weight: 600;
+}
+
+.bed-detail[data-status="FAIL"] {
+  color: var(--thistle);
+}
+
+.bed-detail[data-status="WARN"] {
+  color: var(--pollen);
+}
+
+.bed-detail[data-status="PASS"] {
+  color: var(--fern);
+}
+
+.survey figcaption {
+  font-size: 0.88rem;
+  color: var(--moss-soft);
+}
+
+/* Plants grow in once, left to right, on first load. */
+@media (prefers-reduced-motion: no-preference) {
+  .bed.grown .plant svg {
+    animation: grow 700ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+    animation-delay: calc(var(--i, 0) * 70ms + 150ms);
+  }
+}
+
+@keyframes grow {
+  from {
+    transform: scaleY(0.15);
+    opacity: 0;
+  }
+  to {
+    transform: scaleY(1);
+    opacity: 1;
+  }
+}
+
+/* ---------------------------------------------------------------- steps */
+
+.steps {
+  list-style: none;
+  counter-reset: step;
+  margin: 2rem 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 2.5rem;
+}
+
+.steps li {
+  counter-increment: step;
+  border-top: 3px solid var(--moss);
+  padding-top: 1rem;
+}
+
+.steps li::before {
+  content: counter(step);
+  display: block;
+  font-variation-settings: var(--casual);
+  font-weight: 900;
+  font-size: 2.4rem;
+  color: var(--fern);
+  line-height: 1;
+  margin-bottom: 0.5rem;
+}
+
+.steps p {
+  color: var(--moss-soft);
+}
+
+/* ---------------------------------------------------------------- demo */
+
+.demo {
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.4fr);
+  gap: 3rem;
+  align-items: center;
+}
+
+.window {
+  background: var(--leaf-paper);
+  border: 1px solid var(--furrow);
+  border-radius: 12px;
+  padding: 0.6rem;
+}
+
+.window img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 6px;
+}
+
+/* ---------------------------------------------------------------- checks */
+
+.table-wrap {
+  overflow-x: auto;
+  margin-top: 1.5rem;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.98rem;
+}
+
+th {
+  text-align: left;
+  font-weight: 700;
+  color: var(--moss-soft);
+  border-bottom: 2px solid var(--moss);
+  padding: 0.6rem 1rem 0.6rem 0;
+}
+
+td {
+  border-bottom: 1px solid var(--furrow);
+  padding: 0.65rem 1rem 0.65rem 0;
+  vertical-align: top;
+}
+
+td:first-child {
+  white-space: nowrap;
+}
+
+/* ---------------------------------------------------------------- safety */
+
+.nevers {
+  list-style: none;
+  padding: 0;
+  margin: 1.75rem 0 2rem;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.25rem 2.5rem;
+}
+
+.nevers li {
+  padding-left: 1.1rem;
+  border-left: 3px solid var(--thistle);
+  color: var(--moss-soft);
+}
+
+.nevers strong {
+  display: block;
+  color: var(--moss);
+  font-variation-settings: var(--casual);
+  font-size: 1.15rem;
+  margin-bottom: 0.2rem;
+}
+
+/* ---------------------------------------------------------------- install */
+
+.install-grid {
+  display: grid;
+  gap: 1rem;
+  margin: 1.5rem 0 1.25rem;
+}
+
+.install-grid article {
+  background: var(--leaf-paper);
+  border: 1px solid var(--furrow);
+  border-radius: 10px;
+  padding: 1.25rem 1.4rem;
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.6fr);
+  gap: 0.5rem 2rem;
+  align-items: start;
+}
+
+.install-grid article p {
+  margin: 0;
+}
+
+.install-grid p {
+  color: var(--moss-soft);
+  font-size: 0.95rem;
+}
+
+.code {
+  position: relative;
+  grid-column: 2;
+  grid-row: 1 / span 2;
+}
+
+.code pre {
+  margin: 0;
+  background: var(--lichen);
+  border-radius: 6px;
+  padding: 0.85rem 0.9rem;
+  padding-right: 4.5rem;
+  overflow-x: auto;
+  font-size: 0.82rem;
+  line-height: 1.55;
+}
+
+.copy {
+  position: absolute;
+  top: 0.45rem;
+  right: 0.45rem;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 650;
+  padding: 0.25rem 0.6rem;
+  border-radius: 5px;
+  border: 1px solid var(--furrow);
+  background: var(--leaf-paper);
+  color: var(--moss);
+  cursor: pointer;
+}
+
+/* ---------------------------------------------------------------- stack */
+
+.stack dl {
+  margin: 1.5rem 0;
+  display: grid;
+  gap: 0;
+}
+
+.stack dl div {
+  display: grid;
+  grid-template-columns: 14rem minmax(0, 1fr);
+  gap: 1rem;
+  padding: 0.7rem 0;
+  border-bottom: 1px solid var(--furrow);
+}
+
+.stack dt {
+  font-weight: 700;
+}
+
+.stack dd {
+  margin: 0;
+  color: var(--moss-soft);
+}
+
+/* ---------------------------------------------------------------- honest, footer */
+
+.honest p {
+  font-size: 1.1rem;
+}
+
+.foot {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 3rem;
+  border-top: 1px solid var(--furrow);
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+  font-size: 0.9rem;
+  color: var(--moss-soft);
+}
+
+.foot p {
+  margin: 0;
+}
+
+.foot a {
+  margin-left: 1.25rem;
+}
+
+.foot a:first-child {
+  margin-left: 0;
+}
+
+/* ---------------------------------------------------------------- small screens */
+
+@media (max-width: 900px) {
+  .hero,
+  .demo {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2.5rem;
+  }
+
+  .steps,
+  .nevers,
+  .install-grid article {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .code {
+    grid-column: 1;
+    grid-row: auto;
+    margin-top: 0.5rem;
+  }
+
+  .stack dl div {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.15rem;
+  }
+
+  main > section {
+    padding: 3rem 1rem;
+  }
+
+  .top {
+    padding: 1rem;
+  }
+}
+
+@media (max-width: 520px) {
+  .bed {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .score-num {
+    font-size: 2.8rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}

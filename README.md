@@ -7,6 +7,8 @@
 
 **AI-assisted Linux hardening auditor.** *Your system is a garden. HardenGarden finds the weeds.*
 
+**Website:** <https://saharhalili95.github.io/hardengarden/>
+
 > HardenGarden is an educational/portfolio security tool. It is not a certified compliance
 > scanner and does not replace a professional audit.
 

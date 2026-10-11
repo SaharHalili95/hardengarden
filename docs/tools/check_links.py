@@ -28,6 +28,7 @@ ROOT = Path(__file__).resolve().parents[2]
 OWN_REPO = (
     "https://github.com/SaharHalili95/hardengarden",
     "https://img.shields.io/github/v/release/SaharHalili95/hardengarden",
+    "https://saharhalili95.github.io/hardengarden",
 )
 WARN_STATUSES = {401, 403, 429}
 FIRST_ERROR_STATUS = 400
