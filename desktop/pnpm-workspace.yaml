@@ -1,0 +1,4 @@
+# minimatch < 11.0.1 has a ReDoS advisory (GHSA-g3hv-75wg-m249). ESLint 10 still pins ^10,
+# so force the patched release for the lint tooling until it moves on.
+overrides:
+  minimatch@<11.0.1: 11.0.4

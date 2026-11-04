@@ -647,6 +647,19 @@ td:first-child {
 }
 
 @media (max-width: 520px) {
+  /* One row of links that scrolls sideways, so a single link never wraps alone. */
+  .top nav {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    max-width: 100%;
+    gap: 1.1rem;
+    padding-block: 0.25rem;
+    scrollbar-width: none;
+  }
+  .top nav a {
+    white-space: nowrap;
+    padding-block: 0.5rem;
+  }
   .bed {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
